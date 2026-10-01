@@ -45,12 +45,21 @@ export interface Document {
   owner: string;
 }
 
+export interface Event {
+  id: string;
+  title: string;
+  date: number; // day of month
+  time: string;
+  color: string;
+}
+
 interface AppState {
   currentUser: User | null;
   tasks: Task[];
   projects: Project[];
   documents: Document[];
   team: User[];
+  events: Event[];
   
   setCurrentUser: (user: User | null) => void;
   setTasks: (tasks: Task[]) => void;
@@ -59,6 +68,7 @@ interface AppState {
   addProject: (project: Project) => void;
   addDocument: (doc: Document) => void;
   addTeamMember: (member: User) => void;
+  addEvent: (event: Event) => void;
   fetchTasks: () => Promise<void>;
 }
 
@@ -87,6 +97,12 @@ export const useAppStore = create<AppState>((set) => ({
     { id: '1', name: 'Mustofa', email: 'mustofa@milad200.com', role: 'Owner', status: 'Active' },
     { id: '2', name: 'Ahmad', email: 'ahmad@milad200.com', role: 'Admin', status: 'Active' }
   ],
+  events: [
+    { id: '1', title: 'Design Review', date: 5, time: '10:00 AM', color: 'bg-indigo-100 text-indigo-700' },
+    { id: '2', title: 'Submit Proposal', date: 12, time: '5:00 PM', color: 'bg-emerald-100 text-emerald-700' },
+    { id: '3', title: 'Weekly Sync', date: 12, time: '3:00 PM', color: 'bg-indigo-100 text-indigo-700' },
+    { id: '4', title: 'Vendor Meeting', date: 20, time: '1:00 PM', color: 'bg-indigo-100 text-indigo-700' }
+  ],
   
   setCurrentUser: (user) => set({ currentUser: user }),
   
@@ -95,6 +111,7 @@ export const useAppStore = create<AppState>((set) => ({
   addProject: (project) => set((state) => ({ projects: [...state.projects, project] })),
   addDocument: (doc) => set((state) => ({ documents: [...state.documents, doc] })),
   addTeamMember: (member) => set((state) => ({ team: [...state.team, member] })),
+  addEvent: (event) => set((state) => ({ events: [...state.events, event] })),
   
   updateTaskStatus: async (taskId, newStatus) => {
     set((state) => ({

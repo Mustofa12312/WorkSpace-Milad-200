@@ -9,31 +9,46 @@ function cn(...inputs: ClassValue[]) {
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-// Helper to generate a mockup calendar month
-const generateMockCalendar = () => {
-  const days = [];
-  // previous month padding
-  for (let i = 0; i < 3; i++) {
-    days.push({ day: 28 + i, current: false, events: [] });
-  }
-  // current month
-  for (let i = 1; i <= 31; i++) {
-    const events = [];
-    if (i === 5) events.push({ title: 'Design Review', type: 'meeting', time: '10:00 AM' });
-    if (i === 12) events.push({ title: 'Submit Proposal', type: 'task', time: '5:00 PM' });
-    if (i === 12) events.push({ title: 'Weekly Sync', type: 'meeting', time: '8:00 PM' });
-    if (i === 20) events.push({ title: 'Vendor Meeting', type: 'meeting', time: '1:00 PM' });
-    days.push({ day: i, current: true, events, isToday: i === 12 });
-  }
-  // next month padding
-  for (let i = 1; i <= 8; i++) {
-    days.push({ day: i, current: false, events: [] });
-  }
-  return days;
-};
+import { useAppStore } from '../store/useAppStore';
 
 export default function CalendarView() {
-  const [calendarDays] = useState(generateMockCalendar());
+  const { events, addEvent } = useAppStore();
+
+  const handleNewEvent = () => {
+    const title = window.prompt("Enter new event title:");
+    if (!title || title.trim() === '') return;
+    
+    // Pick a random day in the current month for the demo
+    const randomDay = Math.floor(Math.random() * 28) + 1;
+    
+    addEvent({
+      id: `evt-${Date.now()}`,
+      title,
+      date: randomDay,
+      time: '10:00 AM',
+      color: 'bg-blue-100 text-blue-700'
+    });
+  };
+
+  const generateCalendar = () => {
+    const days = [];
+    // previous month padding
+    for (let i = 0; i < 3; i++) {
+      days.push({ day: 28 + i, current: false, events: [] });
+    }
+    // current month
+    for (let i = 1; i <= 31; i++) {
+      const dayEvents = events.filter(e => e.date === i);
+      days.push({ day: i, current: true, events: dayEvents, isToday: i === 12 });
+    }
+    // next month padding
+    for (let i = 1; i <= 8; i++) {
+      days.push({ day: i, current: false, events: [] });
+    }
+    return days;
+  };
+
+  const calendarDays = generateCalendar();
 
   return (
     <div className="flex-1 flex flex-col h-full bg-slate-50/50 p-8 overflow-hidden">
@@ -51,7 +66,10 @@ export default function CalendarView() {
               September 2026
               <button className="p-2 hover:bg-slate-200 rounded-full transition-colors"><ChevronRight size={20} /></button>
             </div>
-            <button className="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-full font-medium flex items-center gap-2 shadow-sm shadow-primary-500/30 transition-all hover:shadow-md hover:-translate-y-0.5">
+            <button 
+              onClick={handleNewEvent}
+              className="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-full font-medium flex items-center gap-2 shadow-sm shadow-primary-500/30 transition-all hover:shadow-md hover:-translate-y-0.5"
+            >
               <Plus size={18} />
               New Event
             </button>
@@ -81,10 +99,8 @@ export default function CalendarView() {
                 </div>
                 
                 <div className="flex-1 space-y-1.5 overflow-y-auto pr-1">
-                  {d.events.map((evt, idx) => (
-                    <div key={idx} className={cn("px-2 py-1.5 rounded-lg text-xs font-medium border truncate", 
-                      evt.type === 'meeting' ? 'bg-indigo-50 text-indigo-700 border-indigo-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                    )}>
+                  {d.events.map((evt: any, idx) => (
+                    <div key={idx} className={cn("px-2 py-1.5 rounded-lg text-xs font-medium border truncate", evt.color || 'bg-slate-100 text-slate-700')}>
                       <div className="font-bold truncate">{evt.title}</div>
                       <div className="text-[10px] mt-0.5 opacity-80 flex items-center gap-1">
                         <Clock size={10} /> {evt.time}
