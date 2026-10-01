@@ -17,7 +17,24 @@ const COLUMNS: { id: TaskStatus; title: string; color: string }[] = [
 ];
 
 export default function KanbanBoard() {
-  const { tasks, updateTaskStatus } = useAppStore();
+  const { tasks, updateTaskStatus, addTask } = useAppStore();
+  
+  const handleQuickAdd = (status: TaskStatus = 'backlog') => {
+    const title = window.prompt("Enter new task title:");
+    if (!title || title.trim() === '') return;
+    
+    addTask({
+      id: `task-${Date.now()}`,
+      title,
+      project: 'General',
+      priority: 'Medium',
+      status,
+      dueDate: 'No date',
+      comments: 0,
+      attachments: 0,
+      assignee: 'M'
+    });
+  };
   
   // Basic drag state for native HTML5 drag and drop
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
@@ -69,7 +86,10 @@ export default function KanbanBoard() {
           <button className="bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-xl font-medium hover:bg-slate-50 transition-colors shadow-sm">
             Filter
           </button>
-          <button className="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2 rounded-xl font-medium flex items-center gap-2 shadow-sm shadow-primary-500/30 transition-all hover:-translate-y-0.5">
+          <button 
+            onClick={() => handleQuickAdd('backlog')}
+            className="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2 rounded-xl font-medium flex items-center gap-2 shadow-sm shadow-primary-500/30 transition-all hover:-translate-y-0.5"
+          >
             <Plus size={18} />
             New Task
           </button>
@@ -123,7 +143,10 @@ export default function KanbanBoard() {
               
               {/* Quick Add Button */}
               <div className="p-3 border-t border-slate-200/50 bg-slate-50/50 rounded-b-2xl">
-                <button className="w-full py-2.5 rounded-xl border border-dashed border-slate-300 text-slate-500 text-sm font-medium hover:border-primary-400 hover:text-primary-600 hover:bg-primary-50 transition-colors flex items-center justify-center gap-1.5">
+                <button 
+                  onClick={() => handleQuickAdd(column.id)}
+                  className="w-full py-2.5 rounded-xl border border-dashed border-slate-300 text-slate-500 text-sm font-medium hover:border-primary-400 hover:text-primary-600 hover:bg-primary-50 transition-colors flex items-center justify-center gap-1.5"
+                >
                   <Plus size={16} />
                   Add Task
                 </button>

@@ -91,7 +91,10 @@ export default function DashboardLayout() {
                   <h2 className="text-3xl font-bold text-slate-800 tracking-tight">Good Morning, Mustofa!</h2>
                   <p className="text-slate-500 mt-1">Here is what's happening in your workspace today.</p>
                 </div>
-                <button className="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-full font-medium flex items-center gap-2 shadow-sm shadow-primary-500/30 transition-all hover:shadow-md hover:-translate-y-0.5">
+                <button 
+                  onClick={() => setActiveTab('meetings')}
+                  className="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-full font-medium flex items-center gap-2 shadow-sm shadow-primary-500/30 transition-all hover:shadow-md hover:-translate-y-0.5"
+                >
                   <Plus size={18} />
                   New Meeting
                 </button>
