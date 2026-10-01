@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Settings as SettingsIcon, Building, Bell, Shield, Paintbrush, Globe, Save } from 'lucide-react';
+import { Settings as SettingsIcon, Building, Bell, Shield, Paintbrush, Globe, Save, Plus } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 

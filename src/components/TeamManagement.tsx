@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Plus, UserPlus, MoreHorizontal, Mail, Shield, ShieldCheck, User, Clock } from 'lucide-react';
+import { Search, UserPlus, MoreHorizontal, Mail, Shield, ShieldCheck, User, Clock } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -28,7 +28,7 @@ const MOCK_TEAM: TeamMember[] = [
 ];
 
 export default function TeamManagement() {
-  const [members, setMembers] = useState<TeamMember[]>(MOCK_TEAM);
+  const [members] = useState<TeamMember[]>(MOCK_TEAM);
 
   const getRoleIcon = (role: Role) => {
     switch (role) {

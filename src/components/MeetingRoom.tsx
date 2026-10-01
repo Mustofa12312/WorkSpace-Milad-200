@@ -39,7 +39,7 @@ export default function MeetingRoom() {
 
   // Timer logic for recording
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (recordingState === 'recording') {
       interval = setInterval(() => {
         setTime((prev) => prev + 1);
@@ -208,7 +208,7 @@ export default function MeetingRoom() {
           <div className="p-6 border-t border-slate-100">
             <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Participants (4)</h3>
             <div className="space-y-3">
-              {['Mustofa (Organizer)', 'Ahmad', 'Hasan', 'Fatimah'].map((name, i) => (
+              {['Mustofa (Organizer)', 'Ahmad', 'Hasan', 'Fatimah'].map((name) => (
                 <div key={name} className="flex items-center gap-3">
                   <div className="h-8 w-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600">
                     {name.charAt(0)}

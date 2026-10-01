@@ -1,10 +1,4 @@
-import { Search, Plus, Filter, FileText, FileSpreadsheet, FileIcon, Download, MoreVertical, Upload } from 'lucide-react';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+import { Search, Filter, FileText, FileSpreadsheet, FileIcon, Download, MoreVertical, Upload } from 'lucide-react';
 
 const MOCK_DOCS = [
   { id: '1', name: 'Proposal Milad 200 Final.pdf', type: 'pdf', size: '2.4 MB', date: 'Sep 28, 2026', owner: 'Mustofa' },

@@ -1,4 +1,4 @@
-import { Search, Plus, Filter, MoreHorizontal, FolderKanban, Users, Clock, ArrowRight } from 'lucide-react';
+import { Search, Plus, Filter, MoreHorizontal, FolderKanban, Users, Clock } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
