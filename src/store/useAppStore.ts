@@ -40,7 +40,7 @@ const INITIAL_TASKS: Task[] = [
 ];
 
 export const useAppStore = create<AppState>((set) => ({
-  currentUser: { id: 'u1', name: 'Mustofa', email: 'mustofa@workspace.com' }, // Default mock user
+  currentUser: null,
   tasks: INITIAL_TASKS,
   
   setCurrentUser: (user) => set({ currentUser: user }),
