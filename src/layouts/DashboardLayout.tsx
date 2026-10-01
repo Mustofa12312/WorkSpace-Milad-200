@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useAppStore } from '../store/useAppStore';
 import KanbanBoard from '../components/KanbanBoard';
 import MeetingRoom from '../components/MeetingRoom';
@@ -24,8 +24,12 @@ import {
 
 export default function DashboardLayout() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const { tasks } = useAppStore();
+  const { tasks, fetchTasks } = useAppStore();
   const priorityTasks = tasks.filter(t => t.priority === 'High' || t.priority === 'Urgent').slice(0, 3);
+
+  React.useEffect(() => {
+    fetchTasks();
+  }, [fetchTasks]);
 
   return (
     <div className="flex h-screen bg-slate-50 text-slate-900">

@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { db } from '../lib/firebase';
+import { collection, getDocs, doc, setDoc, updateDoc } from 'firebase/firestore';
 
 export type Priority = 'Low' | 'Medium' | 'High' | 'Urgent';
 export type TaskStatus = 'backlog' | 'planned' | 'in_progress' | 'review' | 'completed';
@@ -29,6 +31,7 @@ interface AppState {
   setTasks: (tasks: Task[]) => void;
   updateTaskStatus: (taskId: string, newStatus: TaskStatus) => void;
   addTask: (task: Task) => void;
+  fetchTasks: () => Promise<void>;
 }
 
 const INITIAL_TASKS: Task[] = [
@@ -47,11 +50,46 @@ export const useAppStore = create<AppState>((set) => ({
   
   setTasks: (tasks) => set({ tasks }),
   
-  updateTaskStatus: (taskId, newStatus) => set((state) => ({
-    tasks: state.tasks.map(t => t.id === taskId ? { ...t, status: newStatus } : t)
-  })),
+  updateTaskStatus: async (taskId, newStatus) => {
+    set((state) => ({
+      tasks: state.tasks.map(t => t.id === taskId ? { ...t, status: newStatus } : t)
+    }));
+    try {
+      const taskRef = doc(db, 'tasks', taskId);
+      await updateDoc(taskRef, { status: newStatus });
+    } catch (error) {
+      console.error("Firestore sync error:", error);
+    }
+  },
 
-  addTask: (task) => set((state) => ({
-    tasks: [...state.tasks, task]
-  }))
+  addTask: async (task) => {
+    set((state) => ({
+      tasks: [...state.tasks, task]
+    }));
+    try {
+      await setDoc(doc(db, 'tasks', task.id), task);
+    } catch (error) {
+      console.error("Firestore sync error:", error);
+    }
+  },
+
+  fetchTasks: async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, 'tasks'));
+      const tasksList: Task[] = [];
+      querySnapshot.forEach((docSnap) => {
+        tasksList.push({ id: docSnap.id, ...docSnap.data() } as Task);
+      });
+      if (tasksList.length > 0) {
+        set({ tasks: tasksList });
+      } else {
+        // If empty, initialize with mock data so the board isn't empty on first run
+        INITIAL_TASKS.forEach(async (task) => {
+          await setDoc(doc(db, 'tasks', task.id), task).catch(() => {});
+        });
+      }
+    } catch (error) {
+      console.error("Firestore fetch error (fallback to mock):", error);
+    }
+  }
 }));
