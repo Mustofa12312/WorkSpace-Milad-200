@@ -1,13 +1,28 @@
 import { Search, Filter, FileText, FileSpreadsheet, FileIcon, Download, MoreVertical, Upload } from 'lucide-react';
 
-const MOCK_DOCS = [
-  { id: '1', name: 'Proposal Milad 200 Final.pdf', type: 'pdf', size: '2.4 MB', date: 'Sep 28, 2026', owner: 'Mustofa' },
-  { id: '2', name: 'RAB Kegiatan (Revisi).xlsx', type: 'sheet', size: '156 KB', date: 'Sep 25, 2026', owner: 'Ahmad F.' },
-  { id: '3', name: 'Notula Rapat Pleno I.docx', type: 'doc', size: '42 KB', date: 'Sep 20, 2026', owner: 'Hasan S.' },
-  { id: '4', name: 'Surat Undangan Pembicara.pdf', type: 'pdf', size: '1.1 MB', date: 'Sep 15, 2026', owner: 'Fatimah Z.' },
-];
+import { useAppStore } from '../store/useAppStore';
 
 export default function DocumentsView() {
+  const { documents, addDocument } = useAppStore();
+
+  const handleUpload = () => {
+    const name = window.prompt("Enter document name (e.g., Report.pdf):");
+    if (!name || name.trim() === '') return;
+    
+    // Auto-detect type for icon
+    let type = 'doc';
+    if (name.toLowerCase().endsWith('.pdf')) type = 'pdf';
+    if (name.toLowerCase().endsWith('.xlsx') || name.toLowerCase().endsWith('.csv')) type = 'sheet';
+
+    addDocument({
+      id: `doc-${Date.now()}`,
+      name,
+      type,
+      size: '120 KB', // dummy size
+      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      owner: 'Mustofa' // Should be currentUser.name ideally
+    });
+  };
   const getIcon = (type: string) => {
     switch(type) {
       case 'pdf': return <FileIcon className="text-red-500" size={24} />;
@@ -27,7 +42,10 @@ export default function DocumentsView() {
             <h2 className="text-3xl font-bold text-slate-800 tracking-tight">Documents</h2>
             <p className="text-slate-500 mt-1">Manage proposals, reports, and meeting minutes.</p>
           </div>
-          <button className="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-full font-medium flex items-center gap-2 shadow-sm shadow-primary-500/30 transition-all hover:shadow-md hover:-translate-y-0.5">
+          <button 
+            onClick={handleUpload}
+            className="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-full font-medium flex items-center gap-2 shadow-sm shadow-primary-500/30 transition-all hover:shadow-md hover:-translate-y-0.5"
+          >
             <Upload size={18} />
             Upload File
           </button>
@@ -64,7 +82,7 @@ export default function DocumentsView() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {MOCK_DOCS.map((doc) => (
+              {documents.map((doc) => (
                 <tr key={doc.id} className="hover:bg-slate-50/50 transition-colors group cursor-pointer">
                   <td className="py-4 px-6">
                     <div className="flex items-center gap-4">

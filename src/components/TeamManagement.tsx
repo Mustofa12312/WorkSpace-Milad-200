@@ -7,30 +7,26 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-type Role = 'Owner' | 'Admin' | 'Manager' | 'Member';
-type Status = 'Active' | 'Pending' | 'Suspended';
-
-interface TeamMember {
-  id: string;
-  name: string;
-  email: string;
-  role: Role;
-  status: Status;
-  lastActive: string;
-}
-
-const MOCK_TEAM: TeamMember[] = [
-  { id: '1', name: 'Mustofa (You)', email: 'mustofa@workspace.com', role: 'Owner', status: 'Active', lastActive: 'Just now' },
-  { id: '2', name: 'Ahmad F.', email: 'ahmad@workspace.com', role: 'Admin', status: 'Active', lastActive: '2 mins ago' },
-  { id: '3', name: 'Hasan S.', email: 'hasan@workspace.com', role: 'Manager', status: 'Active', lastActive: '1 hour ago' },
-  { id: '4', name: 'Fatimah Z.', email: 'fatimah@workspace.com', role: 'Member', status: 'Active', lastActive: 'Yesterday' },
-  { id: '5', name: 'Budi T.', email: 'budi@workspace.com', role: 'Member', status: 'Pending', lastActive: '-' },
-];
+import { useAppStore } from '../store/useAppStore';
 
 export default function TeamManagement() {
-  const [members] = useState<TeamMember[]>(MOCK_TEAM);
+  const { team, addTeamMember } = useAppStore();
 
-  const getRoleIcon = (role: Role) => {
+  const handleInvite = () => {
+    const email = window.prompt("Enter new member's email address:");
+    if (!email || email.trim() === '') return;
+    
+    addTeamMember({
+      id: `usr-${Date.now()}`,
+      name: email.split('@')[0],
+      email,
+      role: 'Member',
+      status: 'Pending',
+      lastActive: '-'
+    });
+  };
+
+  const getRoleIcon = (role: string = 'Member') => {
     switch (role) {
       case 'Owner': return <ShieldCheck size={14} className="text-purple-600" />;
       case 'Admin': return <Shield size={14} className="text-blue-600" />;
@@ -39,7 +35,7 @@ export default function TeamManagement() {
     }
   };
 
-  const getRoleBadge = (role: Role) => {
+  const getRoleBadge = (role: string = 'Member') => {
     switch (role) {
       case 'Owner': return 'bg-purple-100 text-purple-700 border-purple-200';
       case 'Admin': return 'bg-blue-100 text-blue-700 border-blue-200';
@@ -48,7 +44,7 @@ export default function TeamManagement() {
     }
   };
 
-  const getStatusBadge = (status: Status) => {
+  const getStatusBadge = (status: string = 'Pending') => {
     switch (status) {
       case 'Active': return 'bg-emerald-50 text-emerald-600 border-emerald-200';
       case 'Pending': return 'bg-orange-50 text-orange-600 border-orange-200';
@@ -66,7 +62,10 @@ export default function TeamManagement() {
             <h2 className="text-3xl font-bold text-slate-800 tracking-tight">Team Management</h2>
             <p className="text-slate-500 mt-1">Manage members, roles, and organization settings.</p>
           </div>
-          <button className="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-full font-medium flex items-center gap-2 shadow-sm shadow-primary-500/30 transition-all hover:shadow-md hover:-translate-y-0.5">
+          <button 
+            onClick={handleInvite}
+            className="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-full font-medium flex items-center gap-2 shadow-sm shadow-primary-500/30 transition-all hover:shadow-md hover:-translate-y-0.5"
+          >
             <UserPlus size={18} />
             Invite Member
           </button>
@@ -110,7 +109,7 @@ export default function TeamManagement() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {members.map((member) => (
+              {team.map((member) => (
                 <tr key={member.id} className="hover:bg-slate-50/50 transition-colors group">
                   <td className="py-4 px-6">
                     <div className="flex items-center gap-3">

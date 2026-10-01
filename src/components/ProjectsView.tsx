@@ -6,14 +6,25 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-const MOCK_PROJECTS = [
-  { id: '1', name: 'Milad 200 Main Event', status: 'Active', progress: 65, members: 12, dueDate: 'Oct 30, 2026', color: 'bg-indigo-500' },
-  { id: '2', name: 'Sponsorship & Finance', status: 'Active', progress: 40, members: 5, dueDate: 'Sep 15, 2026', color: 'bg-emerald-500' },
-  { id: '3', name: 'Marketing & PR', status: 'Planning', progress: 15, members: 8, dueDate: 'Dec 1, 2026', color: 'bg-amber-500' },
-  { id: '4', name: 'Venue & Logistics', status: 'On Hold', progress: 10, members: 4, dueDate: 'Oct 15, 2026', color: 'bg-rose-500' },
-];
+import { useAppStore } from '../store/useAppStore';
 
 export default function ProjectsView() {
+  const { projects, addProject } = useAppStore();
+
+  const handleNewProject = () => {
+    const name = window.prompt("Enter new project name:");
+    if (!name || name.trim() === '') return;
+    
+    addProject({
+      id: `proj-${Date.now()}`,
+      name,
+      status: 'Planning',
+      progress: 0,
+      members: 1,
+      dueDate: 'TBD',
+      color: 'bg-blue-500'
+    });
+  };
   return (
     <div className="flex-1 overflow-y-auto p-8 bg-slate-50/50">
       <div className="max-w-6xl mx-auto">
@@ -23,7 +34,10 @@ export default function ProjectsView() {
             <h2 className="text-3xl font-bold text-slate-800 tracking-tight">Projects</h2>
             <p className="text-slate-500 mt-1">Manage and track your organization's initiatives.</p>
           </div>
-          <button className="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-full font-medium flex items-center gap-2 shadow-sm shadow-primary-500/30 transition-all hover:shadow-md hover:-translate-y-0.5">
+          <button 
+            onClick={handleNewProject}
+            className="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-full font-medium flex items-center gap-2 shadow-sm shadow-primary-500/30 transition-all hover:shadow-md hover:-translate-y-0.5"
+          >
             <Plus size={18} />
             New Project
           </button>
@@ -49,7 +63,7 @@ export default function ProjectsView() {
 
         {/* Projects Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {MOCK_PROJECTS.map(project => (
+          {projects.map(project => (
             <div key={project.id} className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow group cursor-pointer flex flex-col">
               <div className="flex justify-between items-start mb-4">
                 <div className={cn("h-12 w-12 rounded-xl flex items-center justify-center text-white shadow-sm", project.color)}>
