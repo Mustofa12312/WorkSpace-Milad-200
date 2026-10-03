@@ -61,6 +61,7 @@ export interface Event {
 
 interface AppState {
   currentOrgId: string;
+  orgName: string;
   currentUser: User | null;
   tasks: Task[];
   projects: Project[];
@@ -70,6 +71,7 @@ interface AppState {
   
   setCurrentUser: (user: User | null) => void;
   setCurrentOrgId: (orgId: string) => void;
+  setOrgName: (name: string) => void;
   setTasks: (tasks: Task[]) => void;
   updateTaskStatus: (taskId: string, newStatus: TaskStatus) => void;
   addTask: (task: Task) => void;
@@ -85,6 +87,7 @@ let unsubscribers: (() => void)[] = [];
 
 export const useAppStore = create<AppState>((set, get) => ({
   currentOrgId: 'default-org-1',
+  orgName: 'Milad 200',
   currentUser: null,
   tasks: INITIAL_TASKS,
   projects: [],
@@ -96,6 +99,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ currentOrgId: orgId });
     get().setupSubscriptions();
   },
+
+  setOrgName: (name) => set({ orgName: name }),
 
   setCurrentUser: (user) => set({ currentUser: user }),
   setTasks: (tasks) => set({ tasks }),

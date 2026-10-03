@@ -6,6 +6,9 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 import { useAppStore } from '../store/useAppStore';
+import { auth } from '../lib/firebase';
+import { signOut } from 'firebase/auth';
+import { useNavigate } from 'react-router-dom';
 import KanbanBoard from '../components/KanbanBoard';
 import MeetingRoom from '../components/MeetingRoom';
 import TeamManagement from '../components/TeamManagement';
@@ -33,7 +36,21 @@ import {
 export default function DashboardLayout() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const { tasks, events, setupSubscriptions } = useAppStore();
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const { tasks, events, setupSubscriptions, currentUser, setCurrentUser, team, orgName } = useAppStore();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      setCurrentUser(null);
+      navigate('/auth');
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const myRole = team.find(t => t.id === currentUser?.id)?.role || 'Member';
   
   const activeTasksCount = tasks.filter(t => t.status !== 'completed').length;
   const pendingApprovalsCount = tasks.filter(t => t.status === 'review').length;
@@ -66,7 +83,7 @@ export default function DashboardLayout() {
             <h1 className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-indigo-600 bg-clip-text text-transparent">
               Workspace
             </h1>
-            <p className="text-sm text-slate-500 mt-1">Milad 200</p>
+            <p className="text-sm text-slate-500 mt-1">{orgName}</p>
           </div>
           <button className="md:hidden p-1 text-slate-400 hover:text-slate-600" onClick={() => setIsSidebarOpen(false)}>
             <X size={20} />
@@ -114,8 +131,35 @@ export default function DashboardLayout() {
               <Bell size={20} />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
             </button>
-            <div className="h-8 w-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full text-white flex items-center justify-center font-semibold text-sm shadow-sm ring-2 ring-white">
-              M
+            
+            <div className="h-8 w-px bg-slate-200 mx-1"></div>
+            
+            <div className="relative">
+              <button 
+                onClick={() => setIsProfileOpen(!isProfileOpen)}
+                className="flex items-center gap-3 hover:bg-slate-50 p-1.5 rounded-full pr-4 transition-colors border border-transparent hover:border-slate-200 focus:outline-none"
+              >
+                <img 
+                  src={currentUser?.avatar || `https://ui-avatars.com/api/?name=${currentUser?.name || 'User'}&background=0ea5e9&color=fff`} 
+                  alt="User" 
+                  className="w-8 h-8 rounded-full border border-slate-200"
+                />
+                <div className="hidden md:block text-left">
+                  <div className="text-sm font-semibold text-slate-700">{currentUser?.name || 'User'}</div>
+                  <div className="text-xs text-slate-500">{myRole}</div>
+                </div>
+              </button>
+
+              {isProfileOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-lg py-1 z-50">
+                  <div className="px-4 py-2 border-b border-slate-100 mb-1">
+                    <p className="text-sm font-semibold text-slate-800">{currentUser?.name || 'User'}</p>
+                    <p className="text-xs text-slate-500 truncate">{currentUser?.email}</p>
+                  </div>
+                  <button className="w-full text-left px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">My Profile</button>
+                  <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-medium">Log out</button>
+                </div>
+              )}
             </div>
           </div>
         </header>

@@ -24,6 +24,8 @@ function cn(...inputs: ClassValue[]) {
 type RecordingState = 'idle' | 'recording' | 'paused' | 'finished';
 
 import { useAppStore } from '../store/useAppStore';
+import { storage } from '../lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 const TRANSCRIPT_MOCK = [
   { id: 1, time: '19:12', speaker: 'Ahmad', text: 'Untuk kegiatan seminar bulan depan, bagaimana progres persiapan tempatnya?' },
@@ -38,6 +40,9 @@ export default function MeetingRoom() {
   const [time, setTime] = useState(0);
   const [showSummary, setShowSummary] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [audioChunks, setAudioChunks] = useState<BlobPart[]>([]);
+  const [recordingUrl, setRecordingUrl] = useState<string | null>(null);
 
   // Timer logic for recording
   useEffect(() => {
@@ -63,6 +68,61 @@ export default function MeetingRoom() {
       setIsGenerating(false);
       setShowSummary(true);
     }, 2000);
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          setAudioChunks(prev => [...prev, e.data]);
+        }
+      };
+
+      recorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        try {
+          const storageRef = ref(storage, `recordings/meeting_${Date.now()}.webm`);
+          await uploadBytes(storageRef, audioBlob);
+          const url = await getDownloadURL(storageRef);
+          setRecordingUrl(url);
+          console.log("Uploaded recording to:", url);
+        } catch (e) {
+          console.error("Upload failed", e);
+        }
+      };
+
+      setMediaRecorder(recorder);
+      recorder.start();
+      setRecordingState('recording');
+    } catch (e) {
+      console.error("Microphone access denied", e);
+      alert("Microphone access required to record meetings.");
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      mediaRecorder.stop();
+      mediaRecorder.stream.getTracks().forEach(track => track.stop());
+    }
+    setRecordingState('finished');
+  };
+
+  const pauseRecording = () => {
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+      mediaRecorder.pause();
+    }
+    setRecordingState('paused');
+  };
+
+  const resumeRecording = () => {
+    if (mediaRecorder && mediaRecorder.state === 'paused') {
+      mediaRecorder.resume();
+    }
+    setRecordingState('recording');
   };
 
   return (
@@ -125,7 +185,7 @@ export default function MeetingRoom() {
               <div className="flex gap-2 justify-center">
                 {recordingState === 'idle' && (
                   <button 
-                    onClick={() => setRecordingState('recording')}
+                    onClick={startRecording}
                     className="flex-1 flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-900 text-white py-2.5 rounded-xl text-sm font-medium transition-colors"
                   >
                     <Mic size={16} /> Start Recording
@@ -135,13 +195,13 @@ export default function MeetingRoom() {
                 {recordingState === 'recording' && (
                   <>
                     <button 
-                      onClick={() => setRecordingState('paused')}
+                      onClick={pauseRecording}
                       className="flex-1 flex items-center justify-center gap-2 bg-amber-100 hover:bg-amber-200 text-amber-700 py-2.5 rounded-xl text-sm font-medium transition-colors"
                     >
                       <Pause size={16} fill="currentColor" /> Pause
                     </button>
                     <button 
-                      onClick={() => setRecordingState('finished')}
+                      onClick={stopRecording}
                       className="flex-1 flex items-center justify-center gap-2 bg-red-100 hover:bg-red-200 text-red-700 py-2.5 rounded-xl text-sm font-medium transition-colors"
                     >
                       <Square size={16} fill="currentColor" /> Stop
@@ -152,13 +212,13 @@ export default function MeetingRoom() {
                 {recordingState === 'paused' && (
                   <>
                     <button 
-                      onClick={() => setRecordingState('recording')}
+                      onClick={resumeRecording}
                       className="flex-1 flex items-center justify-center gap-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 py-2.5 rounded-xl text-sm font-medium transition-colors"
                     >
                       <Play size={16} fill="currentColor" /> Resume
                     </button>
                     <button 
-                      onClick={() => setRecordingState('finished')}
+                      onClick={stopRecording}
                       className="flex-1 flex items-center justify-center gap-2 bg-red-100 hover:bg-red-200 text-red-700 py-2.5 rounded-xl text-sm font-medium transition-colors"
                     >
                       <Square size={16} fill="currentColor" /> Stop
@@ -167,12 +227,24 @@ export default function MeetingRoom() {
                 )}
 
                 {recordingState === 'finished' && (
-                  <button 
-                    disabled
-                    className="flex-1 flex items-center justify-center gap-2 bg-slate-100 text-slate-400 py-2.5 rounded-xl text-sm font-medium"
-                  >
-                    <CheckCircle2 size={16} /> Recording Saved
-                  </button>
+                  <div className="flex flex-col gap-2 w-full">
+                    <button 
+                      disabled
+                      className="w-full flex items-center justify-center gap-2 bg-slate-100 text-slate-400 py-2.5 rounded-xl text-sm font-medium"
+                    >
+                      <CheckCircle2 size={16} /> Recording Saved
+                    </button>
+                    {recordingUrl && (
+                      <a 
+                        href={recordingUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="w-full text-center text-xs text-indigo-600 font-bold hover:underline"
+                      >
+                        Download / Play Recording
+                      </a>
+                    )}
+                  </div>
                 )}
               </div>
             </div>

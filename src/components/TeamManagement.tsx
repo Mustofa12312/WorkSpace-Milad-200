@@ -10,7 +10,10 @@ function cn(...inputs: ClassValue[]) {
 import { useAppStore } from '../store/useAppStore';
 
 export default function TeamManagement() {
-  const { team, addTeamMember } = useAppStore();
+  const { team, addTeamMember, currentUser } = useAppStore();
+
+  const myRole = team.find(t => t.id === currentUser?.id)?.role || 'Member';
+  const canInvite = myRole === 'Owner' || myRole === 'Admin';
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newMember, setNewMember] = useState({ email: '', role: 'Member' });
@@ -68,13 +71,15 @@ export default function TeamManagement() {
             <h2 className="text-3xl font-bold text-slate-800 tracking-tight">Team Management</h2>
             <p className="text-slate-500 mt-1">Manage members, roles, and organization settings.</p>
           </div>
-          <button 
-            onClick={() => setIsModalOpen(true)}
-            className="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-full font-medium flex items-center gap-2 shadow-sm shadow-primary-500/30 transition-all hover:shadow-md hover:-translate-y-0.5"
-          >
-            <UserPlus size={18} />
-            Invite Member
-          </button>
+          {canInvite && (
+            <button 
+              onClick={() => setIsModalOpen(true)}
+              className="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-full font-medium flex items-center gap-2 shadow-sm shadow-primary-500/30 transition-all hover:shadow-md hover:-translate-y-0.5"
+            >
+              <UserPlus size={18} />
+              Invite Member
+            </button>
+          )}
         </div>
 
         {/* Action Bar */}
