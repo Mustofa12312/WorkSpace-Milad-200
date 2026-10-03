@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { db } from '../lib/firebase';
-import { doc, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, doc, onSnapshot, query, setDoc, updateDoc, where } from 'firebase/firestore';
 
 export type Priority = 'Low' | 'Medium' | 'High' | 'Urgent';
 export type TaskStatus = 'backlog' | 'planned' | 'in_progress' | 'review' | 'completed';
@@ -80,6 +80,7 @@ interface AppState {
   addTeamMember: (member: User) => void;
   addEvent: (event: Event) => void;
   setupSubscriptions: () => void;
+  teardownSubscriptions: () => void;
 }
 
 const INITIAL_TASKS: Task[] = [];
@@ -148,25 +149,28 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
-  setupSubscriptions: () => {
-    const orgId = get().currentOrgId;
-    
-    // Clear old subscriptions
+  teardownSubscriptions: () => {
     unsubscribers.forEach(unsub => unsub());
     unsubscribers = [];
+  },
 
+  setupSubscriptions: () => {
+    const orgId = get().currentOrgId;
+
+    // Clear old subscriptions
+    get().teardownSubscriptions();
+
+    // Filter on the server with where(): Firestore security rules are not
+    // filters, so an unscoped collection read would be rejected outright.
     const subscribeToCollection = (colName: string, stateKey: keyof AppState) => {
-      import('firebase/firestore').then(({ collection, onSnapshot }) => {
-        const unsubscribe = onSnapshot(collection(db, colName), (snapshot) => {
-          const list = snapshot.docs
-            .map(d => ({ id: d.id, ...(d.data() as object) }))
-            .filter((data: Record<string, unknown>) => !data.organizationId || data.organizationId === orgId);
-          set({ [stateKey]: list });
-        }, (error) => {
-          console.error(`Error syncing ${colName}:`, error);
-        });
-        unsubscribers.push(unsubscribe);
+      const scoped = query(collection(db, colName), where('organizationId', '==', orgId));
+      const unsubscribe = onSnapshot(scoped, (snapshot) => {
+        const list = snapshot.docs.map(d => ({ ...(d.data() as object), id: d.id }));
+        set({ [stateKey]: list } as Partial<AppState>);
+      }, (error) => {
+        console.error(`Error syncing ${colName}:`, error);
       });
+      unsubscribers.push(unsubscribe);
     };
 
     subscribeToCollection('tasks', 'tasks');
