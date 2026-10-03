@@ -7,13 +7,16 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/team/$(request.auth.uid)).data.organizationId == orgId;
     }
 
+    match /team/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
     match /{collection=**}/{document} {
-      // Allow if authenticated AND either the document doesn't have an orgId (initialization) 
-      // OR the document's orgId matches the user's orgId in the team collection.
       allow read, write: if request.auth != null && (
+        resource == null ||
         !("organizationId" in resource.data) || 
         isUserInOrg(resource.data.organizationId) ||
-        isUserInOrg(request.resource.data.organizationId)
+        (request.resource != null && "organizationId" in request.resource.data && isUserInOrg(request.resource.data.organizationId))
       );
     }
   }

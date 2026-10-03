@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, ArrowRight } from 'lucide-react';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { auth } from '../lib/firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { useAppStore } from '../store/useAppStore';
 
 export default function Auth() {
@@ -14,13 +16,40 @@ export default function Auth() {
   const navigate = useNavigate();
   const { setCurrentUser } = useAppStore();
 
-  const handleAuthSuccess = (user: import('firebase/auth').User | Record<string, unknown>) => {
+  const handleAuthSuccess = async (user: import('firebase/auth').User | Record<string, unknown>) => {
+    const uid = ('uid' in user ? user.uid : user.id) as string;
+    const email = (user.email as string) || '';
+    const name = (user as import('firebase/auth').User).displayName || email.split('@')[0] || 'User';
+    
+    // Save to global state
     setCurrentUser({
-      id: ('uid' in user ? user.uid : user.id) as string,
-      name: (user as import('firebase/auth').User).displayName || (user.email as string)?.split('@')[0] || 'User',
-      email: (user.email as string) || '',
+      id: uid,
+      name,
+      email,
       avatar: (user as import('firebase/auth').User).photoURL || undefined
     });
+
+    // Automatically provision user into team collection if they don't exist
+    if ('uid' in user) {
+      try {
+        const userRef = doc(db, 'team', uid);
+        const userSnap = await getDoc(userRef);
+        if (!userSnap.exists()) {
+          await setDoc(userRef, {
+            id: uid,
+            name,
+            email,
+            role: 'Owner', // First user logic or default MVP role
+            status: 'Active',
+            organizationId: 'default-org-1',
+            lastActive: new Date().toISOString()
+          });
+        }
+      } catch (err) {
+        console.error("Failed to provision user in team:", err);
+      }
+    }
+
     navigate('/dashboard');
   };
 
