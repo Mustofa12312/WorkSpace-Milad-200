@@ -157,10 +157,10 @@ export default function MeetingRoom() {
         </div>
       </div>
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
         
         {/* Left Column - Details & Recording */}
-        <div className="w-1/3 min-w-[350px] border-r border-slate-200 bg-white flex flex-col overflow-y-auto custom-scrollbar">
+        <div className="w-full md:w-1/3 md:min-w-[350px] border-b md:border-b-0 md:border-r border-slate-200 bg-white flex flex-col overflow-y-auto custom-scrollbar md:h-full max-h-[50vh] md:max-h-full">
           
           {/* Recording Controls */}
           <div className="p-6 border-b border-slate-100 bg-slate-50/50">
@@ -185,11 +185,12 @@ export default function MeetingRoom() {
                 )}
               </div>
 
-              <div className="flex gap-2 justify-center">
+              <div className="flex flex-wrap gap-2 justify-center">
                 {recordingState === 'idle' && (
                   <button 
                     onClick={startRecording}
-                    className="flex-1 flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-900 text-white py-2.5 rounded-xl text-sm font-medium transition-colors"
+                    title="Mulai Merekam Audio"
+                    className="flex-1 min-w-[120px] flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-900 text-white py-2.5 rounded-xl text-sm font-medium transition-colors"
                   >
                     <Mic size={16} /> Start Recording
                   </button>
@@ -199,13 +200,15 @@ export default function MeetingRoom() {
                   <>
                     <button 
                       onClick={pauseRecording}
-                      className="flex-1 flex items-center justify-center gap-2 bg-amber-100 hover:bg-amber-200 text-amber-700 py-2.5 rounded-xl text-sm font-medium transition-colors"
+                      title="Jeda Rekaman"
+                      className="flex-1 min-w-[100px] flex items-center justify-center gap-2 bg-amber-100 hover:bg-amber-200 text-amber-700 py-2.5 rounded-xl text-sm font-medium transition-colors"
                     >
                       <Pause size={16} fill="currentColor" /> Pause
                     </button>
                     <button 
                       onClick={stopRecording}
-                      className="flex-1 flex items-center justify-center gap-2 bg-red-100 hover:bg-red-200 text-red-700 py-2.5 rounded-xl text-sm font-medium transition-colors"
+                      title="Hentikan Rekaman"
+                      className="flex-1 min-w-[100px] flex items-center justify-center gap-2 bg-red-100 hover:bg-red-200 text-red-700 py-2.5 rounded-xl text-sm font-medium transition-colors"
                     >
                       <Square size={16} fill="currentColor" /> Stop
                     </button>
@@ -216,13 +219,15 @@ export default function MeetingRoom() {
                   <>
                     <button 
                       onClick={resumeRecording}
-                      className="flex-1 flex items-center justify-center gap-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 py-2.5 rounded-xl text-sm font-medium transition-colors"
+                      title="Lanjutkan Rekaman"
+                      className="flex-1 min-w-[100px] flex items-center justify-center gap-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 py-2.5 rounded-xl text-sm font-medium transition-colors"
                     >
                       <Play size={16} fill="currentColor" /> Resume
                     </button>
                     <button 
                       onClick={stopRecording}
-                      className="flex-1 flex items-center justify-center gap-2 bg-red-100 hover:bg-red-200 text-red-700 py-2.5 rounded-xl text-sm font-medium transition-colors"
+                      title="Hentikan Rekaman"
+                      className="flex-1 min-w-[100px] flex items-center justify-center gap-2 bg-red-100 hover:bg-red-200 text-red-700 py-2.5 rounded-xl text-sm font-medium transition-colors"
                     >
                       <Square size={16} fill="currentColor" /> Stop
                     </button>

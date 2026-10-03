@@ -30,12 +30,15 @@ import {
   Calendar,
   FileText,
   Menu,
-  X
+  X,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 export default function DashboardLayout() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const { tasks, events, setupSubscriptions, currentUser, setCurrentUser, team, orgName } = useAppStore();
   const navigate = useNavigate();
@@ -75,33 +78,47 @@ export default function DashboardLayout() {
 
       {/* Sidebar */}
       <aside className={cn(
-        "w-64 bg-white border-r border-slate-200 flex flex-col absolute inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0",
-        isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+        "bg-white border-r border-slate-200 flex flex-col absolute inset-y-0 left-0 z-50 transform transition-all duration-300 ease-in-out md:relative md:translate-x-0",
+        isSidebarOpen ? "translate-x-0 w-64" : "-translate-x-full md:translate-x-0",
+        isSidebarCollapsed ? "md:w-20" : "md:w-64"
       )}>
-        <div className="p-6 border-b border-slate-200 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-indigo-600 bg-clip-text text-transparent">
-              Workspace
-            </h1>
-            <p className="text-sm text-slate-500 mt-1">{orgName}</p>
-          </div>
+        <div className={cn("p-6 border-b border-slate-200 flex items-center h-20 transition-all", isSidebarCollapsed ? "justify-center px-2" : "justify-between")}>
+          {!isSidebarCollapsed && (
+            <div className="overflow-hidden whitespace-nowrap">
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-indigo-600 bg-clip-text text-transparent">
+                Workspace
+              </h1>
+              <p className="text-sm text-slate-500 mt-1 truncate">{orgName}</p>
+            </div>
+          )}
+          {isSidebarCollapsed && (
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-600 to-indigo-600 flex items-center justify-center text-white font-bold text-xl">
+              W
+            </div>
+          )}
           <button className="md:hidden p-1 text-slate-400 hover:text-slate-600" onClick={() => setIsSidebarOpen(false)}>
             <X size={20} />
           </button>
         </div>
         
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-          <NavItem icon={<LayoutDashboard size={20}/>} label="Dashboard" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
-          <NavItem icon={<FolderKanban size={20}/>} label="Projects" active={activeTab === 'projects'} onClick={() => setActiveTab('projects')} />
-          <NavItem icon={<CheckSquare size={20}/>} label="Tasks" active={activeTab === 'tasks'} onClick={() => setActiveTab('tasks')} />
-          <NavItem icon={<CalendarDays size={20}/>} label="Meetings" active={activeTab === 'meetings'} onClick={() => setActiveTab('meetings')} />
-          <NavItem icon={<Calendar size={20}/>} label="Calendar" active={activeTab === 'calendar'} onClick={() => setActiveTab('calendar')} />
-          <NavItem icon={<FileText size={20}/>} label="Documents" active={activeTab === 'documents'} onClick={() => setActiveTab('documents')} />
-          <NavItem icon={<Users size={20}/>} label="Team" active={activeTab === 'team'} onClick={() => setActiveTab('team')} />
+        <nav className="flex-1 py-4 space-y-1 overflow-y-auto overflow-x-hidden">
+          <NavItem collapsed={isSidebarCollapsed} icon={<LayoutDashboard size={20}/>} label="Dashboard" active={activeTab === 'dashboard'} onClick={() => {setActiveTab('dashboard'); setIsSidebarOpen(false)}} />
+          <NavItem collapsed={isSidebarCollapsed} icon={<FolderKanban size={20}/>} label="Projects" active={activeTab === 'projects'} onClick={() => {setActiveTab('projects'); setIsSidebarOpen(false)}} />
+          <NavItem collapsed={isSidebarCollapsed} icon={<CheckSquare size={20}/>} label="Tasks" active={activeTab === 'tasks'} onClick={() => {setActiveTab('tasks'); setIsSidebarOpen(false)}} />
+          <NavItem collapsed={isSidebarCollapsed} icon={<CalendarDays size={20}/>} label="Meetings" active={activeTab === 'meetings'} onClick={() => {setActiveTab('meetings'); setIsSidebarOpen(false)}} />
+          <NavItem collapsed={isSidebarCollapsed} icon={<Calendar size={20}/>} label="Calendar" active={activeTab === 'calendar'} onClick={() => {setActiveTab('calendar'); setIsSidebarOpen(false)}} />
+          <NavItem collapsed={isSidebarCollapsed} icon={<FileText size={20}/>} label="Documents" active={activeTab === 'documents'} onClick={() => {setActiveTab('documents'); setIsSidebarOpen(false)}} />
+          <NavItem collapsed={isSidebarCollapsed} icon={<Users size={20}/>} label="Team" active={activeTab === 'team'} onClick={() => {setActiveTab('team'); setIsSidebarOpen(false)}} />
         </nav>
         
-        <div className="p-4 border-t border-slate-200">
-          <NavItem icon={<Settings size={20}/>} label="Settings" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
+        <div className="p-4 border-t border-slate-200 flex flex-col gap-2">
+          <NavItem collapsed={isSidebarCollapsed} icon={<Settings size={20}/>} label="Settings" active={activeTab === 'settings'} onClick={() => {setActiveTab('settings'); setIsSidebarOpen(false)}} />
+          <button 
+            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            className="hidden md:flex items-center justify-center w-full p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors mt-2"
+          >
+            {isSidebarCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+          </button>
         </div>
       </aside>
 
@@ -263,19 +280,25 @@ export default function DashboardLayout() {
   );
 }
 
-function NavItem({ icon, label, active, onClick }: { icon: React.ReactNode, label: string, active?: boolean, onClick: () => void }) {
+function NavItem({ icon, label, active, collapsed, onClick }: { icon: React.ReactNode, label: string, active?: boolean, collapsed?: boolean, onClick: () => void }) {
   return (
-    <button 
-      onClick={onClick}
-      className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
-        active 
-          ? 'bg-primary-50 text-primary-700' 
-          : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-      }`}
-    >
-      <div className={active ? 'text-primary-600' : 'text-slate-400'}>{icon}</div>
-      {label}
-    </button>
+    <div className="px-3">
+      <button 
+        onClick={onClick}
+        title={collapsed ? label : undefined}
+        className={`w-full flex items-center ${collapsed ? 'justify-center px-0' : 'gap-3 px-4'} py-2.5 rounded-xl text-sm transition-all relative outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
+          active 
+            ? 'bg-indigo-50/80 text-indigo-700 font-bold' 
+            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'
+        }`}
+      >
+        {active && !collapsed && (
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-indigo-600 rounded-r-md"></div>
+        )}
+        <div className={active ? 'text-indigo-600' : 'text-slate-400'}>{icon}</div>
+        {!collapsed && <span className="truncate">{label}</span>}
+      </button>
+    </div>
   );
 }
 

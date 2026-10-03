@@ -48,6 +48,7 @@ export interface Document {
   date: string;
   owner: string;
   organizationId?: string;
+  url?: string;
 }
 
 export interface Event {

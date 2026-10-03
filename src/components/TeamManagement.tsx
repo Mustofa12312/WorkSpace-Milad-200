@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { Search, UserPlus, MoreHorizontal, Mail, Shield, ShieldCheck, User, Clock } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Search, UserPlus, MoreHorizontal, Mail, Shield, ShieldCheck, User, Clock, Trash2, Edit2, AlertCircle } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import toast from 'react-hot-toast';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -17,6 +18,28 @@ export default function TeamManagement() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newMember, setNewMember] = useState({ email: '', role: 'Member' });
+  
+  // Kebab Menu State
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  
+  // Confirmation Dialog State
+  const [confirmDialog, setConfirmDialog] = useState<{ isOpen: boolean; memberId: string | null; memberName: string }>({
+    isOpen: false,
+    memberId: null,
+    memberName: ''
+  });
+
+  // Handle outside click for kebab menu
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setActiveMenuId(null);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleInvite = (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,6 +56,16 @@ export default function TeamManagement() {
     
     setIsModalOpen(false);
     setNewMember({ email: '', role: 'Member' });
+    toast.success('Undangan berhasil dikirim!');
+  };
+  
+  const handleRemoveMember = () => {
+    if (confirmDialog.memberId) {
+      // In a real app we would call an API or store action here
+      // removeTeamMember(confirmDialog.memberId);
+      toast.success(`${confirmDialog.memberName} berhasil dikeluarkan dari tim.`);
+    }
+    setConfirmDialog({ isOpen: false, memberId: null, memberName: '' });
   };
 
   const getRoleIcon = (role: string = 'Member') => {
@@ -62,19 +95,19 @@ export default function TeamManagement() {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-8 bg-slate-50/50">
+    <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50/50">
       <div className="max-w-6xl mx-auto">
         
         {/* Header */}
-        <div className="flex justify-between items-end mb-8">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-end mb-6 md:mb-8 gap-4">
           <div>
-            <h2 className="text-3xl font-bold text-slate-800 tracking-tight">Team Management</h2>
-            <p className="text-slate-500 mt-1">Manage members, roles, and organization settings.</p>
+            <h2 className="text-2xl md:text-3xl font-bold text-slate-800 tracking-tight">Team Management</h2>
+            <p className="text-slate-500 mt-1 text-sm md:text-base">Manage members, roles, and organization settings.</p>
           </div>
           {canInvite && (
             <button 
               onClick={() => setIsModalOpen(true)}
-              className="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-full font-medium flex items-center gap-2 shadow-sm shadow-primary-500/30 transition-all hover:shadow-md hover:-translate-y-0.5"
+              className="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-xl md:rounded-full font-medium flex items-center justify-center gap-2 shadow-sm shadow-primary-500/30 transition-all hover:shadow-md hover:-translate-y-0.5"
             >
               <UserPlus size={18} />
               Invite Member
@@ -83,8 +116,8 @@ export default function TeamManagement() {
         </div>
 
         {/* Action Bar */}
-        <div className="bg-white p-4 rounded-t-2xl border border-slate-200 border-b-0 flex justify-between items-center">
-          <div className="flex items-center bg-slate-50 rounded-xl px-4 py-2 w-80 border border-slate-200 focus-within:ring-2 focus-within:ring-primary-500/20 transition-shadow">
+        <div className="bg-white p-4 rounded-t-2xl border border-slate-200 border-b-0 flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="flex items-center bg-slate-50 rounded-xl px-4 py-2 w-full md:w-80 border border-slate-200 focus-within:ring-2 focus-within:ring-primary-500/20 transition-shadow">
             <Search size={16} className="text-slate-400" />
             <input 
               type="text" 
@@ -92,14 +125,14 @@ export default function TeamManagement() {
               className="bg-transparent border-none outline-none ml-2 w-full text-sm placeholder-slate-400"
             />
           </div>
-          <div className="flex gap-2">
-            <select className="bg-white border border-slate-200 text-slate-600 text-sm rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-primary-500/20">
+          <div className="flex gap-2 w-full md:w-auto">
+            <select className="flex-1 md:flex-none bg-white border border-slate-200 text-slate-600 text-sm rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-primary-500/20">
               <option>All Roles</option>
               <option>Admin</option>
               <option>Manager</option>
               <option>Member</option>
             </select>
-            <select className="bg-white border border-slate-200 text-slate-600 text-sm rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-primary-500/20">
+            <select className="flex-1 md:flex-none bg-white border border-slate-200 text-slate-600 text-sm rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-primary-500/20">
               <option>All Status</option>
               <option>Active</option>
               <option>Pending</option>
@@ -107,9 +140,69 @@ export default function TeamManagement() {
           </div>
         </div>
 
-        {/* Data Table */}
-        <div className="bg-white border border-slate-200 rounded-b-2xl overflow-hidden shadow-sm">
-          <table className="w-full text-left border-collapse">
+        {/* Responsive Data View: Table on md+, Cards on mobile */}
+        <div className="bg-white border border-slate-200 md:rounded-b-2xl overflow-hidden shadow-sm">
+          
+          {/* Mobile View (Stacked Cards) */}
+          <div className="md:hidden divide-y divide-slate-100">
+            {team.map((member) => (
+              <div key={member.id} className="p-4 flex flex-col gap-3">
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 text-indigo-700 flex items-center justify-center font-bold text-sm border border-indigo-200">
+                      {member.name.charAt(0)}
+                    </div>
+                    <div>
+                      <div className="font-semibold text-slate-800 text-sm">{member.name}</div>
+                      <div className="text-slate-500 text-xs mt-0.5">{member.email}</div>
+                    </div>
+                  </div>
+                  
+                  {/* Mobile Actions */}
+                  <div className="relative">
+                    <button 
+                      onClick={() => setActiveMenuId(activeMenuId === member.id ? null : member.id)}
+                      className="text-slate-400 hover:text-slate-700 p-2 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors"
+                    >
+                      <MoreHorizontal size={18} />
+                    </button>
+                    {activeMenuId === member.id && (
+                      <div ref={menuRef} className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-lg py-1 z-10 animate-in fade-in zoom-in-95 duration-100">
+                        <button className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2">
+                          <Edit2 size={16} className="text-slate-400" />
+                          Ubah Role
+                        </button>
+                        <button 
+                          onClick={() => {
+                            setActiveMenuId(null);
+                            setConfirmDialog({ isOpen: true, memberId: member.id, memberName: member.name });
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 font-medium"
+                        >
+                          <Trash2 size={16} />
+                          Keluarkan dari Tim
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="flex justify-between items-center bg-slate-50 rounded-lg p-3">
+                  <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold border", getRoleBadge(member.role))}>
+                    {getRoleIcon(member.role)}
+                    {member.role}
+                  </span>
+                  <span className={cn("inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border", getStatusBadge(member.status))}>
+                    {member.status === 'Pending' && <Clock size={10} className="mr-1" />}
+                    {member.status}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop View (Table) */}
+          <table className="w-full text-left border-collapse hidden md:table">
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-semibold">
                 <th className="py-4 px-6">Member</th>
@@ -150,10 +243,32 @@ export default function TeamManagement() {
                   <td className="py-4 px-6 text-sm text-slate-500 font-medium">
                     {member.lastActive}
                   </td>
-                  <td className="py-4 px-6 text-right">
-                    <button className="text-slate-400 hover:text-primary-600 p-2 rounded-lg hover:bg-primary-50 transition-colors opacity-0 group-hover:opacity-100">
+                  <td className="py-4 px-6 text-right relative">
+                    <button 
+                      onClick={() => setActiveMenuId(activeMenuId === member.id ? null : member.id)}
+                      className="text-slate-400 hover:text-primary-600 p-2 rounded-lg hover:bg-primary-50 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                    >
                       <MoreHorizontal size={18} />
                     </button>
+                    
+                    {activeMenuId === member.id && (
+                      <div ref={menuRef} className="absolute right-6 top-10 mt-1 w-48 bg-white border border-slate-200 rounded-xl shadow-lg py-1 z-10 animate-in fade-in zoom-in-95 duration-100">
+                        <button className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2">
+                          <Edit2 size={16} className="text-slate-400" />
+                          Ubah Role
+                        </button>
+                        <button 
+                          onClick={() => {
+                            setActiveMenuId(null);
+                            setConfirmDialog({ isOpen: true, memberId: member.id, memberName: member.name });
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 font-medium"
+                        >
+                          <Trash2 size={16} />
+                          Keluarkan dari Tim
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -163,10 +278,10 @@ export default function TeamManagement() {
 
       </div>
 
-      {/* Modal */}
+      {/* Invite Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="p-6 border-b border-slate-100">
               <h3 className="text-xl font-bold text-slate-800">Invite Team Member</h3>
             </div>
@@ -185,10 +300,42 @@ export default function TeamManagement() {
               </div>
               
               <div className="pt-4 flex gap-3 justify-end">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 text-slate-600 font-medium hover:bg-slate-100 rounded-xl transition-colors">Cancel</button>
-                <button type="submit" className="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-xl transition-colors shadow-sm shadow-primary-500/30">Send Invite</button>
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 text-slate-600 font-medium hover:bg-slate-100 rounded-xl transition-colors outline-none focus-visible:ring-2 focus-visible:ring-slate-400">Cancel</button>
+                <button type="submit" className="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-xl transition-colors shadow-sm shadow-primary-500/30 outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2">Send Invite</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {confirmDialog.isOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-6 flex flex-col items-center text-center">
+              <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mb-4">
+                <AlertCircle className="text-red-600" size={24} />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 mb-2">Keluarkan Anggota?</h3>
+              <p className="text-sm text-slate-500 mb-6">
+                Apakah Anda yakin ingin mengeluarkan <strong>{confirmDialog.memberName}</strong> dari tim? Mereka akan kehilangan seluruh akses ke ruang kerja ini. Tindakan ini tidak dapat dibatalkan.
+              </p>
+              
+              <div className="flex w-full gap-3">
+                <button 
+                  onClick={() => setConfirmDialog({ isOpen: false, memberId: null, memberName: '' })} 
+                  className="flex-1 py-2.5 text-slate-700 font-medium bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+                >
+                  Batal
+                </button>
+                <button 
+                  onClick={handleRemoveMember}
+                  className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white font-medium rounded-xl transition-colors shadow-sm shadow-red-600/30 outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"
+                >
+                  Ya, Keluarkan
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

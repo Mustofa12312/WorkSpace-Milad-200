@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 vi.mock('../lib/firebase', () => ({ db: {} }));
@@ -52,7 +52,7 @@ describe('KanbanBoard', () => {
     render(<KanbanBoard />);
     expect(within(column(/Backlog/)).getByText('Book venue')).toBeInTheDocument();
     expect(within(column(/In Progress/)).getByText('Write proposal')).toBeInTheDocument();
-    expect(within(column(/Completed/)).getByText('Drop tasks here')).toBeInTheDocument();
+    expect(within(column(/Completed/)).getByText('Belum ada tugas')).toBeInTheDocument();
   });
 
   it('creates a task via the modal with the chosen column status', async () => {
@@ -68,14 +68,16 @@ describe('KanbanBoard', () => {
     expect(screen.queryByText('Create New Task')).not.toBeInTheDocument();
   });
 
-  it('moves a task when dropped onto another column', () => {
+  it('filters tasks using the search bar', async () => {
+    const user = userEvent.setup();
     render(<KanbanBoard />);
-    const dataTransfer = { effectAllowed: '', dropEffect: '', setData: vi.fn(), getData: vi.fn() };
 
-    fireEvent.dragStart(screen.getByText('Book venue').closest('[draggable="true"]')!, { dataTransfer });
-    fireEvent.dragOver(column(/Completed/), { dataTransfer });
-    fireEvent.drop(column(/Completed/), { dataTransfer });
+    expect(screen.getByText('Book venue')).toBeInTheDocument();
+    expect(screen.getByText('Write proposal')).toBeInTheDocument();
 
-    expect(updateTaskStatus).toHaveBeenCalledWith('a', 'completed');
+    await user.type(screen.getByPlaceholderText('Search tasks...'), 'Book');
+
+    expect(screen.getByText('Book venue')).toBeInTheDocument();
+    expect(screen.queryByText('Write proposal')).not.toBeInTheDocument();
   });
 });

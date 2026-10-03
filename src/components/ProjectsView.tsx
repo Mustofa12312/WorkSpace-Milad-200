@@ -80,55 +80,71 @@ export default function ProjectsView() {
         </div>
 
         {/* Projects Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {projects.map(project => (
-            <div key={project.id} className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow group cursor-pointer flex flex-col">
-              <div className="flex justify-between items-start mb-4">
-                <div className={cn("h-12 w-12 rounded-xl flex items-center justify-center text-white shadow-sm", project.color)}>
-                  <FolderKanban size={24} />
-                </div>
-                <button className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors opacity-0 group-hover:opacity-100">
-                  <MoreHorizontal size={20} />
-                </button>
-              </div>
-              
-              <div className="mb-1 flex items-center gap-2">
-                <span className={cn("text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full border", 
-                  project.status === 'Active' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 
-                  project.status === 'Planning' ? 'bg-blue-50 text-blue-600 border-blue-200' : 
-                  'bg-rose-50 text-rose-600 border-rose-200'
-                )}>
-                  {project.status}
-                </span>
-              </div>
-              <h3 className="text-lg font-bold text-slate-800 mb-1 leading-tight group-hover:text-primary-600 transition-colors">{project.name}</h3>
-              
-              <div className="mt-4 flex items-center gap-4 text-sm text-slate-500 font-medium">
-                <div className="flex items-center gap-1.5">
-                  <Users size={16} />
-                  {project.members}
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Clock size={16} />
-                  {project.dueDate}
-                </div>
-              </div>
-
-              <div className="mt-auto pt-6">
-                <div className="flex justify-between text-xs font-bold text-slate-500 mb-2">
-                  <span>Progress</span>
-                  <span className="text-slate-700">{project.progress}%</span>
-                </div>
-                <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                  <div 
-                    className={cn("h-full rounded-full", project.color)}
-                    style={{ width: `${project.progress}%` }}
-                  ></div>
-                </div>
-              </div>
+        {projects.length === 0 ? (
+          <div className="bg-white border border-slate-200 rounded-2xl flex flex-col items-center justify-center py-16 text-center shadow-sm">
+            <div className="w-20 h-20 bg-primary-50 rounded-full flex items-center justify-center mb-4">
+              <FolderKanban size={32} className="text-primary-500" />
             </div>
-          ))}
-        </div>
+            <h3 className="text-lg font-bold text-slate-800 mb-1">Belum Ada Proyek</h3>
+            <p className="text-slate-500 max-w-sm mb-6">Mulai rencanakan dan lacak inisiatif tim Anda dengan membuat proyek baru.</p>
+            <button 
+              onClick={() => setIsModalOpen(true)}
+              className="bg-primary-50 text-primary-600 hover:bg-primary-100 font-medium px-6 py-2.5 rounded-xl transition-colors"
+            >
+              Buat Proyek
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {projects.map(project => (
+              <div key={project.id} className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow group cursor-pointer flex flex-col">
+                <div className="flex justify-between items-start mb-4">
+                  <div className={cn("h-12 w-12 rounded-xl flex items-center justify-center text-white shadow-sm", project.color)}>
+                    <FolderKanban size={24} />
+                  </div>
+                  <button className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 outline-none focus-visible:ring-2 focus-visible:ring-primary-500">
+                    <MoreHorizontal size={20} />
+                  </button>
+                </div>
+                
+                <div className="mb-1 flex items-center gap-2">
+                  <span className={cn("text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full border", 
+                    project.status === 'Active' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 
+                    project.status === 'Planning' ? 'bg-blue-50 text-blue-600 border-blue-200' : 
+                    'bg-rose-50 text-rose-600 border-rose-200'
+                  )}>
+                    {project.status}
+                  </span>
+                </div>
+                <h3 className="text-lg font-bold text-slate-800 mb-1 leading-tight group-hover:text-primary-600 transition-colors">{project.name}</h3>
+                
+                <div className="mt-4 flex items-center gap-4 text-sm text-slate-500 font-medium">
+                  <div className="flex items-center gap-1.5">
+                    <Users size={16} />
+                    {project.members}
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Clock size={16} />
+                    {project.dueDate}
+                  </div>
+                </div>
+
+                <div className="mt-auto pt-6">
+                  <div className="flex justify-between text-xs font-bold text-slate-500 mb-2">
+                    <span>Progress</span>
+                    <span className="text-slate-700">{project.progress}%</span>
+                  </div>
+                  <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                    <div 
+                      className={cn("h-full rounded-full", project.color)}
+                      style={{ width: `${project.progress}%` }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
       </div>
 
