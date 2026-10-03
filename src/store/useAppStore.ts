@@ -15,6 +15,7 @@ export interface Task {
   comments: number;
   attachments: number;
   assignee: string;
+  organizationId?: string;
 }
 
 export interface User {
@@ -25,6 +26,7 @@ export interface User {
   role?: string;
   status?: string;
   lastActive?: string;
+  organizationId?: string;
 }
 
 export interface Project {
@@ -35,6 +37,7 @@ export interface Project {
   members: number;
   dueDate: string;
   color: string;
+  organizationId?: string;
 }
 
 export interface Document {
@@ -44,6 +47,7 @@ export interface Document {
   size: string;
   date: string;
   owner: string;
+  organizationId?: string;
 }
 
 export interface Event {
@@ -52,9 +56,11 @@ export interface Event {
   date: number; // day of month
   time: string;
   color: string;
+  organizationId?: string;
 }
 
 interface AppState {
+  currentOrgId: string;
   currentUser: User | null;
   tasks: Task[];
   projects: Project[];
@@ -63,6 +69,7 @@ interface AppState {
   events: Event[];
   
   setCurrentUser: (user: User | null) => void;
+  setCurrentOrgId: (orgId: string) => void;
   setTasks: (tasks: Task[]) => void;
   updateTaskStatus: (taskId: string, newStatus: TaskStatus) => void;
   addTask: (task: Task) => void;
@@ -75,7 +82,8 @@ interface AppState {
 
 const INITIAL_TASKS: Task[] = [];
 
-export const useAppStore = create<AppState>((set) => ({
+export const useAppStore = create<AppState>((set, get) => ({
+  currentOrgId: 'default-org-1',
   currentUser: null,
   tasks: INITIAL_TASKS,
   
@@ -84,28 +92,41 @@ export const useAppStore = create<AppState>((set) => ({
   team: [],
   events: [],
   
+  setCurrentOrgId: (orgId) => {
+    set({ currentOrgId: orgId });
+    get().fetchTasks();
+  },
+
   setCurrentUser: (user) => set({ currentUser: user }),
   
   setTasks: (tasks) => set({ tasks }),
 
   addProject: async (project) => {
-    set((state) => ({ projects: [...state.projects, project] }));
-    try { await setDoc(doc(db, 'projects', project.id), project); } catch (e) { console.error("Firestore error:", e); }
+    const orgId = get().currentOrgId;
+    const projectWithOrg = { ...project, organizationId: orgId };
+    set((state) => ({ projects: [...state.projects, projectWithOrg] }));
+    try { await setDoc(doc(db, 'projects', project.id), projectWithOrg); } catch (e) { console.error("Firestore error:", e); }
   },
   
   addDocument: async (docInfo) => {
-    set((state) => ({ documents: [...state.documents, docInfo] }));
-    try { await setDoc(doc(db, 'documents', docInfo.id), docInfo); } catch (e) { console.error("Firestore error:", e); }
+    const orgId = get().currentOrgId;
+    const docWithOrg = { ...docInfo, organizationId: orgId };
+    set((state) => ({ documents: [...state.documents, docWithOrg] }));
+    try { await setDoc(doc(db, 'documents', docInfo.id), docWithOrg); } catch (e) { console.error("Firestore error:", e); }
   },
   
   addTeamMember: async (member) => {
-    set((state) => ({ team: [...state.team, member] }));
-    try { await setDoc(doc(db, 'team', member.id), member); } catch (e) { console.error("Firestore error:", e); }
+    const orgId = get().currentOrgId;
+    const memberWithOrg = { ...member, organizationId: orgId };
+    set((state) => ({ team: [...state.team, memberWithOrg] }));
+    try { await setDoc(doc(db, 'team', member.id), memberWithOrg); } catch (e) { console.error("Firestore error:", e); }
   },
   
   addEvent: async (event) => {
-    set((state) => ({ events: [...state.events, event] }));
-    try { await setDoc(doc(db, 'events', event.id), event); } catch (e) { console.error("Firestore error:", e); }
+    const orgId = get().currentOrgId;
+    const eventWithOrg = { ...event, organizationId: orgId };
+    set((state) => ({ events: [...state.events, eventWithOrg] }));
+    try { await setDoc(doc(db, 'events', event.id), eventWithOrg); } catch (e) { console.error("Firestore error:", e); }
   },
   
   updateTaskStatus: async (taskId, newStatus) => {
@@ -121,22 +142,31 @@ export const useAppStore = create<AppState>((set) => ({
   },
 
   addTask: async (task) => {
+    const orgId = get().currentOrgId;
+    const taskWithOrg = { ...task, organizationId: orgId };
     set((state) => ({
-      tasks: [...state.tasks, task]
+      tasks: [...state.tasks, taskWithOrg]
     }));
     try {
-      await setDoc(doc(db, 'tasks', task.id), task);
+      await setDoc(doc(db, 'tasks', task.id), taskWithOrg);
     } catch (error) {
       console.error("Firestore sync error:", error);
     }
   },
 
   fetchTasks: async () => {
+    const orgId = get().currentOrgId;
     try {
       const getDocsSafe = async (col: string) => {
         try {
+          // Note: In a real app with proper Firebase Indexes, we should use:
+          // query(collection(db, col), where("organizationId", "==", orgId))
+          // For MVP without creating indexes manually, we fetch all and filter in memory:
           const snap = await getDocs(collection(db, col));
-          return snap.docs;
+          return snap.docs.filter(d => {
+            const data = d.data();
+            return !data.organizationId || data.organizationId === orgId;
+          });
         } catch {
           return [];
         }
