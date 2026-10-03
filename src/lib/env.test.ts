@@ -28,6 +28,7 @@ describe('parseFirebaseEnv', () => {
   });
 
   it('lists every missing variable at once', () => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { VITE_FIREBASE_API_KEY: _a, VITE_FIREBASE_APP_ID: _b, ...partial } = validEnv;
     try {
       parseFirebaseEnv(partial);
