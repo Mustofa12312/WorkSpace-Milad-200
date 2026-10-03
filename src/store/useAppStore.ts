@@ -155,7 +155,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         const unsubscribe = onSnapshot(collection(db, colName), (snapshot) => {
           const list = snapshot.docs
             .map(d => ({ id: d.id, ...(d.data() as object) }))
-            .filter((data: any) => !data.organizationId || data.organizationId === orgId);
+            .filter((data: Record<string, unknown>) => !data.organizationId || data.organizationId === orgId);
           set({ [stateKey]: list });
         }, (error) => {
           console.error(`Error syncing ${colName}:`, error);
