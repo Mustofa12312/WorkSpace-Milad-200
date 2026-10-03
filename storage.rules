@@ -1,8 +1,42 @@
 rules_version = '2';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Milad 200 Workspace — Cloud Storage Security Rules
+//
+// Files live under orgs/{orgId}/... and are only accessible to members of that
+// organization. Membership is resolved from Firestore team/{uid} via a
+// cross-service lookup (Firebase will ask to grant this permission on first
+// deploy: `firebase deploy --only storage`).
+//
+// Tested in tests/rules/storage.rules.test.ts  →  npm run test:rules
+// ─────────────────────────────────────────────────────────────────────────────
+
 service firebase.storage {
   match /b/{bucket}/o {
-    match /{allPaths=**} {
-      allow read, write: if request.auth != null;
+
+    function signedIn() { return request.auth != null; }
+    function profile() {
+      return firestore.get(/databases/(default)/documents/team/$(request.auth.uid)).data;
     }
+    function inOrg(orgId) { return signedIn() && profile().organizationId == orgId; }
+    function isManager() { return profile().role in ['Owner', 'Admin']; }
+
+    // Shared documents: max 25 MB (mirrors MAX_UPLOAD_BYTES in DocumentsView.tsx).
+    match /orgs/{orgId}/documents/{fileName} {
+      allow read: if inOrg(orgId);
+      allow create: if inOrg(orgId) && request.resource.size < 25 * 1024 * 1024;
+      allow delete: if inOrg(orgId) && isManager();
+    }
+
+    // Meeting recordings: audio only, max 200 MB.
+    match /orgs/{orgId}/recordings/{fileName} {
+      allow read: if inOrg(orgId);
+      allow create: if inOrg(orgId)
+        && request.resource.size < 200 * 1024 * 1024
+        && request.resource.contentType.matches('audio/.*');
+      allow delete: if inOrg(orgId) && isManager();
+    }
+
+    // Everything else is denied by default.
   }
 }

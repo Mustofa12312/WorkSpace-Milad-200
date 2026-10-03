@@ -1,23 +1,121 @@
 rules_version = '2';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Milad 200 Workspace — Firestore Security Rules
+//
+// Model:
+//   • Every user has a profile at team/{uid} holding { organizationId, role }.
+//   • All business data (tasks, projects, documents, events) carries an
+//     organizationId and is only visible/writable to members of that org.
+//   • Roles: Owner > Admin > Manager > Member.
+//       - Owner/Admin may invite & manage members and delete data.
+//       - Only an Owner may grant the Owner role.
+//   • Anything not explicitly allowed below is DENIED.
+//
+// NOTE: Rules are not filters. Clients must query with
+//   where('organizationId', '==', <orgId>)  (see src/store/useAppStore.ts).
+//
+// Tested in tests/rules/firestore.rules.test.ts  →  npm run test:rules
+// ─────────────────────────────────────────────────────────────────────────────
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Function to check if the user belongs to the requested organization
-    function isUserInOrg(orgId) {
-      return get(/databases/$(database)/documents/team/$(request.auth.uid)).data.organizationId == orgId;
-    }
 
-    match /team/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
+    // The single organization new users may self-join. Joining any other org
+    // requires an Owner/Admin to create the membership.
+    function defaultOrg() { return 'default-org-1'; }
 
-    match /{collection=**}/{document} {
-      allow read, write: if request.auth != null && (
-        resource == null ||
-        !("organizationId" in resource.data) || 
-        isUserInOrg(resource.data.organizationId) ||
-        (request.resource != null && "organizationId" in request.resource.data && isUserInOrg(request.resource.data.organizationId))
+    function signedIn() { return request.auth != null; }
+    function profilePath() { return /databases/$(database)/documents/team/$(request.auth.uid); }
+    function hasProfile() { return signedIn() && exists(profilePath()); }
+    function me() { return get(profilePath()).data; }
+    function myOrg() { return me().organizationId; }
+    function isManager() { return me().role in ['Owner', 'Admin']; }
+    function isOwner() { return me().role == 'Owner'; }
+    function validRole(role) { return role in ['Owner', 'Admin', 'Manager', 'Member']; }
+
+    function inMyOrg(data) {
+      return hasProfile() && data.organizationId is string && data.organizationId == myOrg();
+    }
+    // organizationId may never be changed on update (prevents moving/hijacking docs).
+    function orgUnchanged() {
+      return request.resource.data.organizationId == resource.data.organizationId;
+    }
+    function canGrant(role) { return validRole(role) && (role != 'Owner' || isOwner()); }
+
+    // ── Team / user profiles ────────────────────────────────────────────────
+    match /team/{memberId} {
+      allow read: if signedIn() && (
+        request.auth.uid == memberId ||
+        inMyOrg(resource.data)
       );
+
+      allow create: if signedIn() && (
+        // Self-provisioning on first login: always as plain Member of the default org.
+        (
+          request.auth.uid == memberId &&
+          request.resource.data.id == memberId &&
+          request.resource.data.role == 'Member' &&
+          request.resource.data.organizationId == defaultOrg()
+        ) ||
+        // Invitation by an Owner/Admin into their own org.
+        (
+          request.auth.uid != memberId &&
+          hasProfile() && isManager() &&
+          request.resource.data.organizationId == myOrg() &&
+          canGrant(request.resource.data.role)
+        )
+      );
+
+      allow update: if signedIn() && (
+        // Users may edit their own profile but never their role or organization.
+        (
+          request.auth.uid == memberId &&
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'organizationId', 'id'])
+        ) ||
+        // Owner/Admin may manage members of their own org.
+        (
+          inMyOrg(resource.data) && isManager() && orgUnchanged() &&
+          canGrant(request.resource.data.role) &&
+          (resource.data.role != 'Owner' || isOwner())
+        )
+      );
+
+      allow delete: if inMyOrg(resource.data) && isManager() &&
+        request.auth.uid != memberId &&
+        (resource.data.role != 'Owner' || isOwner());
     }
+
+    // ── Org-scoped business data ────────────────────────────────────────────
+
+    match /tasks/{id} {
+      allow read: if inMyOrg(resource.data);
+      allow create: if inMyOrg(request.resource.data);
+      allow update: if inMyOrg(resource.data) && orgUnchanged();
+      allow delete: if inMyOrg(resource.data) && isManager();
+    }
+
+    match /projects/{id} {
+      allow read: if inMyOrg(resource.data);
+      allow create: if inMyOrg(request.resource.data);
+      allow update: if inMyOrg(resource.data) && orgUnchanged();
+      allow delete: if inMyOrg(resource.data) && isManager();
+    }
+
+    match /documents/{id} {
+      allow read: if inMyOrg(resource.data);
+      allow create: if inMyOrg(request.resource.data);
+      allow update: if inMyOrg(resource.data) && orgUnchanged();
+      allow delete: if inMyOrg(resource.data) && isManager();
+    }
+
+    match /events/{id} {
+      allow read: if inMyOrg(resource.data);
+      allow create: if inMyOrg(request.resource.data);
+      allow update: if inMyOrg(resource.data) && orgUnchanged();
+      allow delete: if inMyOrg(resource.data) && isManager();
+    }
+
+    // Everything else is denied by default (no catch-all match).
   }
 }

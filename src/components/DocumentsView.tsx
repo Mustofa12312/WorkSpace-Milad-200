@@ -5,8 +5,11 @@ import { useAppStore } from '../store/useAppStore';
 import { storage } from '../lib/firebase';
 import { ref, uploadBytes } from 'firebase/storage';
 
+/** Must match the limit in storage.rules. */
+const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
+
 export default function DocumentsView() {
-  const { documents, addDocument } = useAppStore();
+  const { documents, addDocument, currentUser, currentOrgId } = useAppStore();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newDocName, setNewDocName] = useState('');
@@ -16,6 +19,10 @@ export default function DocumentsView() {
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newDocName || newDocName.trim() === '' || !selectedFile) return;
+    if (selectedFile.size > MAX_UPLOAD_BYTES) {
+      alert('Ukuran file maksimal 25 MB.');
+      return;
+    }
     
     setIsUploading(true);
     let type = 'doc';
@@ -23,8 +30,8 @@ export default function DocumentsView() {
     if (newDocName.toLowerCase().endsWith('.xlsx') || newDocName.toLowerCase().endsWith('.csv') || selectedFile.name.endsWith('.xlsx')) type = 'sheet';
 
     try {
-      const storageRef = ref(storage, `documents/${Date.now()}_${selectedFile.name}`);
-      await uploadBytes(storageRef, selectedFile);
+      const storageRef = ref(storage, `orgs/${currentOrgId}/documents/${Date.now()}_${selectedFile.name}`);
+      await uploadBytes(storageRef, selectedFile, { contentType: selectedFile.type || undefined });
       
       const fileSizeKB = Math.round(selectedFile.size / 1024);
       
@@ -34,7 +41,7 @@ export default function DocumentsView() {
         type,
         size: `${fileSizeKB} KB`,
         date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        owner: 'Mustofa', // Ideally from currentUser
+        owner: currentUser?.name || 'Unknown',
         // In a real app we would save the URL too: url: url
       });
       
