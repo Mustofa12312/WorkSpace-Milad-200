@@ -1,5 +1,5 @@
 import { defineConfig, mergeConfig } from 'vitest/config'
-import viteConfig from './vite.config'
+import viteConfig from './vite.config.ts'
 
 // Unit & component tests (jsdom). Firebase is mocked in each test file, so no
 // network access or real credentials are needed — dummy env vars suffice.
