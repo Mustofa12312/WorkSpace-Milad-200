@@ -3,7 +3,7 @@ import { Search, Filter, FileText, FileSpreadsheet, FileIcon, Download, MoreVert
 
 import { useAppStore } from '../store/useAppStore';
 import { storage } from '../lib/firebase';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes } from 'firebase/storage';
 
 export default function DocumentsView() {
   const { documents, addDocument } = useAppStore();
@@ -25,7 +25,6 @@ export default function DocumentsView() {
     try {
       const storageRef = ref(storage, `documents/${Date.now()}_${selectedFile.name}`);
       await uploadBytes(storageRef, selectedFile);
-      const url = await getDownloadURL(storageRef);
       
       const fileSizeKB = Math.round(selectedFile.size / 1024);
       

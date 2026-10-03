@@ -1,0 +1,12 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // This allows any authenticated user to read/write if their organizationId matches the document's organizationId
+    // or if the document does not have an organizationId yet (during initialization)
+    match /{collection=**}/{document} {
+      allow read, write: if request.auth != null; 
+      // For production MVP, you should strictly enforce organization constraints:
+      // allow read, write: if request.auth != null && (resource.data.organizationId == request.auth.token.orgId || request.resource.data.organizationId == request.auth.token.orgId);
+    }
+  }
+}

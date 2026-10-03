@@ -1,4 +1,10 @@
 import React, { useState } from 'react';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 import { useAppStore } from '../store/useAppStore';
 import KanbanBoard from '../components/KanbanBoard';
 import MeetingRoom from '../components/MeetingRoom';
@@ -19,11 +25,14 @@ import {
   Play,
   FolderKanban,
   Calendar,
-  FileText
+  FileText,
+  Menu,
+  X
 } from 'lucide-react';
 
 export default function DashboardLayout() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { tasks, events, setupSubscriptions } = useAppStore();
   
   const activeTasksCount = tasks.filter(t => t.status !== 'completed').length;
@@ -37,14 +46,31 @@ export default function DashboardLayout() {
   }, [setupSubscriptions]);
 
   return (
-    <div className="flex h-screen bg-slate-50 text-slate-900">
+    <div className="flex h-screen bg-slate-50 text-slate-900 overflow-hidden relative">
+      
+      {/* Mobile Sidebar Overlay */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 md:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-slate-200 flex flex-col">
-        <div className="p-6 border-b border-slate-200">
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-indigo-600 bg-clip-text text-transparent">
-            Workspace
-          </h1>
-          <p className="text-sm text-slate-500 mt-1">Milad 200</p>
+      <aside className={cn(
+        "w-64 bg-white border-r border-slate-200 flex flex-col absolute inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0",
+        isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+      )}>
+        <div className="p-6 border-b border-slate-200 flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-indigo-600 bg-clip-text text-transparent">
+              Workspace
+            </h1>
+            <p className="text-sm text-slate-500 mt-1">Milad 200</p>
+          </div>
+          <button className="md:hidden p-1 text-slate-400 hover:text-slate-600" onClick={() => setIsSidebarOpen(false)}>
+            <X size={20} />
+          </button>
         </div>
         
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
@@ -63,16 +89,24 @@ export default function DashboardLayout() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Header */}
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8">
-          <div className="flex items-center bg-slate-100 rounded-full px-4 py-2 w-96 border border-slate-200 focus-within:ring-2 focus-within:ring-primary-500/20 transition-shadow">
-            <Search size={18} className="text-slate-400" />
-            <input 
-              type="text" 
-              placeholder="Search projects, tasks, or meetings..." 
-              className="bg-transparent border-none outline-none ml-3 w-full text-sm placeholder-slate-400"
-            />
+        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8">
+          <div className="flex items-center gap-4">
+            <button 
+              className="md:hidden p-2 text-slate-500 hover:bg-slate-100 rounded-lg"
+              onClick={() => setIsSidebarOpen(true)}
+            >
+              <Menu size={24} />
+            </button>
+            <div className="hidden md:flex items-center bg-slate-100 rounded-full px-4 py-2 w-96 border border-slate-200 focus-within:ring-2 focus-within:ring-primary-500/20 transition-shadow">
+              <Search size={18} className="text-slate-400" />
+              <input 
+                type="text" 
+                placeholder="Search projects, tasks, or meetings..." 
+                className="bg-transparent border-none outline-none ml-3 w-full text-sm placeholder-slate-400"
+              />
+            </div>
           </div>
           
           <div className="flex items-center gap-4">
@@ -106,7 +140,7 @@ export default function DashboardLayout() {
               </div>
 
               {/* Dashboard Stats */}
-              <div className="grid grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <StatCard title="Active Tasks" value={activeTasksCount.toString()} trend="In Progress" type="neutral" />
                 <StatCard title="Pending Approvals" value={pendingApprovalsCount.toString()} trend="Needs Review" type="warning" />
                 <StatCard title="Upcoming Meetings" value={upcomingMeetingsCount.toString()} trend="Scheduled" type="info" />
@@ -142,7 +176,7 @@ export default function DashboardLayout() {
                     View Board &rarr;
                   </button>
                 </div>
-                <div className="grid grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {priorityTasks.map(task => (
                     <TaskCard key={task.id} title={task.title} project={task.project} dueDate={task.dueDate} priority={task.priority} />
                   ))}

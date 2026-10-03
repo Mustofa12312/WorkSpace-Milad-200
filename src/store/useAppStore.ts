@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { db } from '../lib/firebase';
-import { collection, getDocs, doc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, setDoc, updateDoc } from 'firebase/firestore';
 
 export type Priority = 'Low' | 'Medium' | 'High' | 'Urgent';
 export type TaskStatus = 'backlog' | 'planned' | 'in_progress' | 'review' | 'completed';
