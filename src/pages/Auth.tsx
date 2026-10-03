@@ -1,57 +1,18 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, ArrowRight } from 'lucide-react';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { auth } from '../lib/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
-import { useAppStore } from '../store/useAppStore';
+import { toAuthMessage } from '../lib/authErrors';
 
+// Note: after a successful sign-in, App.tsx's onAuthStateChanged listener
+// provisions the team document (see lib/provisionUser.ts) and the router
+// redirects to /dashboard — so this page only has to perform the sign-in.
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate();
-  const { setCurrentUser } = useAppStore();
-
-  const handleAuthSuccess = async (user: import('firebase/auth').User | Record<string, unknown>) => {
-    const uid = ('uid' in user ? user.uid : user.id) as string;
-    const email = (user.email as string) || '';
-    const name = (user as import('firebase/auth').User).displayName || email.split('@')[0] || 'User';
-    
-    // Save to global state
-    setCurrentUser({
-      id: uid,
-      name,
-      email,
-      avatar: (user as import('firebase/auth').User).photoURL || undefined
-    });
-
-    // Automatically provision user into team collection if they don't exist
-    if ('uid' in user) {
-      try {
-        const userRef = doc(db, 'team', uid);
-        const userSnap = await getDoc(userRef);
-        if (!userSnap.exists()) {
-          await setDoc(userRef, {
-            id: uid,
-            name,
-            email,
-            role: 'Owner', // First user logic or default MVP role
-            status: 'Active',
-            organizationId: 'default-org-1',
-            lastActive: new Date().toISOString()
-          });
-        }
-      } catch (err) {
-        console.error("Failed to provision user in team:", err);
-      }
-    }
-
-    navigate('/dashboard');
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,22 +21,13 @@ export default function Auth() {
     
     try {
       if (isLogin) {
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        handleAuthSuccess(userCredential.user);
+        await signInWithEmailAndPassword(auth, email, password);
       } else {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        handleAuthSuccess(userCredential.user);
+        await createUserWithEmailAndPassword(auth, email, password);
       }
     } catch (err: unknown) {
-      const error = err as Error & { code?: string };
-      console.error(error);
-      setError(error.message || 'Authentication failed. Check Firebase keys.');
-      // For MVP showcase purposes, if Firebase fails due to dummy keys or missing config, we still simulate login:
-      if (error.code === 'auth/invalid-api-key' || error.code === 'auth/configuration-not-found' || error.code === 'auth/invalid-credential') {
-        setTimeout(() => {
-          handleAuthSuccess({ uid: 'mvp-user', email });
-        }, 1000);
-      }
+      console.error(err);
+      setError(toAuthMessage(err, 'Autentikasi gagal. Silakan coba lagi.'));
     } finally {
       setIsLoading(false);
     }
@@ -85,12 +37,10 @@ export default function Auth() {
     setError('');
     const provider = new GoogleAuthProvider();
     try {
-      const userCredential = await signInWithPopup(auth, provider);
-      handleAuthSuccess(userCredential.user);
+      await signInWithPopup(auth, provider);
     } catch (err: unknown) {
-      const error = err as Error;
-      console.error(error);
-      setError(error.message || 'Google Auth failed.');
+      console.error(err);
+      setError(toAuthMessage(err, 'Login Google gagal. Silakan coba lagi.'));
     }
   };
 

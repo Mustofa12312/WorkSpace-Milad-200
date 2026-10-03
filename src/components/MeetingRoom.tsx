@@ -41,7 +41,6 @@ export default function MeetingRoom() {
   const [showSummary, setShowSummary] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
-  const [audioChunks, setAudioChunks] = useState<BlobPart[]>([]);
   const [recordingUrl, setRecordingUrl] = useState<string | null>(null);
 
   // Timer logic for recording
@@ -74,23 +73,27 @@ export default function MeetingRoom() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream);
+      // Collect chunks in a local array: reading React state inside onstop would
+      // capture the stale (empty) initial value and upload an empty file.
+      const chunks: BlobPart[] = [];
       
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
-          setAudioChunks(prev => [...prev, e.data]);
+          chunks.push(e.data);
         }
       };
 
       recorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        const audioBlob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
+        const orgId = useAppStore.getState().currentOrgId;
         try {
-          const storageRef = ref(storage, `recordings/meeting_${Date.now()}.webm`);
-          await uploadBytes(storageRef, audioBlob);
+          const storageRef = ref(storage, `orgs/${orgId}/recordings/meeting_${Date.now()}.webm`);
+          await uploadBytes(storageRef, audioBlob, { contentType: audioBlob.type });
           const url = await getDownloadURL(storageRef);
           setRecordingUrl(url);
-          console.log("Uploaded recording to:", url);
         } catch (e) {
           console.error("Upload failed", e);
+          alert("Gagal mengunggah rekaman. Periksa koneksi atau izin Anda.");
         }
       };
 

@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './lib/firebase';
 import { useAppStore } from './store/useAppStore';
+import { ensureTeamMember } from './lib/provisionUser';
 import Auth from './pages/Auth';
 import DashboardLayout from './layouts/DashboardLayout';
 
@@ -11,21 +12,18 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // User is signed in
-        setCurrentUser({
-          id: user.uid,
-          name: user.displayName || user.email?.split('@')[0] || 'User',
-          email: user.email || '',
-          avatar: user.photoURL || undefined
-        });
+        // Provision team/{uid} first: Firestore rules resolve the caller's
+        // organization from it, so subscriptions must not start before it exists.
+        const profile = await ensureTeamMember(user);
+        if (profile.organizationId && profile.organizationId !== useAppStore.getState().currentOrgId) {
+          useAppStore.setState({ currentOrgId: profile.organizationId });
+        }
+        setCurrentUser(profile);
       } else {
-        // User is signed out
-        // If we are in MVP showcase mode and simulated login happened, currentUser might be set manually
-        // We will only clear it if we actually intend to log out. 
-        // For strict persistence:
-        // setCurrentUser(null);
+        useAppStore.getState().teardownSubscriptions();
+        setCurrentUser(null);
       }
       setLoading(false);
     });
