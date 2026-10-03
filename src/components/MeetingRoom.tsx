@@ -1,15 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   Mic, Square, Play, Pause, Video, Users, FileText, Sparkles,
-  CheckCircle2, Clock, MoreVertical, Calendar, Link as LinkIcon,
+  CheckCircle2, Clock, Calendar, Link as LinkIcon,
   Plus, ArrowLeft, Trash2, Search, ChevronRight, Check, X,
-  Pencil, ExternalLink, AlertCircle
+  Pencil, AlertCircle
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import toast from 'react-hot-toast';
 
-import { useAppStore, type Meeting, type AgendaItem, type TranscriptLine, type MeetingType } from '../store/useAppStore';
+import { useAppStore, type Meeting, type AgendaItem, type TranscriptLine, type MeetingType, type ApprovalStatus } from '../store/useAppStore';
 import { storage } from '../lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
@@ -378,6 +378,21 @@ function MeetingDetail({ meeting, onBack }: { meeting: Meeting; onBack: () => vo
   const [actionItems, setActionItems] = useState(meeting.actionItems || []);
   const [editingTranscriptId, setEditingTranscriptId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
+  const [editSpeaker, setEditSpeaker] = useState('');
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const seekAudio = (timeStr: string) => {
+    if (!audioRef.current) return;
+    const parts = timeStr.split(':');
+    let secs = 0;
+    if (parts.length === 3) {
+      secs = parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseInt(parts[2]);
+    } else if (parts.length === 2) {
+      secs = parseInt(parts[0]) * 60 + parseInt(parts[1]);
+    }
+    audioRef.current.currentTime = secs;
+    audioRef.current.play().catch(console.error);
+  };
 
   // Timer
   useEffect(() => {
@@ -485,11 +500,16 @@ function MeetingDetail({ meeting, onBack }: { meeting: Meeting; onBack: () => vo
   };
 
   const saveTranscriptEdit = async (id: string) => {
-    const updated = transcript.map(t => t.id === id ? { ...t, text: editText } : t);
+    const updated = transcript.map(t => t.id === id ? { ...t, text: editText, speaker: editSpeaker } : t);
     setTranscript(updated);
     await updateMeeting(meeting.id, { transcript: updated });
     setEditingTranscriptId(null);
     toast.success('Transkrip diperbarui');
+  };
+
+  const handleApproval = async (status: ApprovalStatus) => {
+    await updateMeeting(meeting.id, { approvalStatus: status });
+    toast.success(`Status Notula: ${status}`);
   };
 
   const project = projects.find(p => p.id === meeting.projectId);
@@ -587,10 +607,9 @@ function MeetingDetail({ meeting, onBack }: { meeting: Meeting; onBack: () => vo
                       <CheckCircle2 size={14} /> Rekaman Tersimpan
                     </div>
                     {meeting.recordingUrl && (
-                      <a href={meeting.recordingUrl} target="_blank" rel="noopener noreferrer"
-                        className="w-full flex items-center justify-center gap-2 text-xs text-indigo-600 font-bold hover:underline">
-                        <ExternalLink size={12} /> Putar Rekaman
-                      </a>
+                      <div className="w-full mt-2">
+                        <audio ref={audioRef} controls src={meeting.recordingUrl} className="w-full h-10 rounded-lg outline-none" />
+                      </div>
                     )}
                   </div>
                 )}
@@ -707,42 +726,40 @@ function MeetingDetail({ meeting, onBack }: { meeting: Meeting; onBack: () => vo
                     {transcript.map(item => (
                       <div key={item.id} className="flex gap-4 group">
                         <div className="w-12 pt-1 flex-shrink-0">
-                          <button className="text-xs font-mono text-primary-400 hover:text-primary-600 hover:bg-primary-50 px-1.5 py-0.5 rounded transition-colors">
+                          <button onClick={() => seekAudio(item.time)} title="Lompat ke waktu ini"
+                            className="text-xs font-mono text-primary-400 hover:text-primary-600 hover:bg-primary-50 px-1.5 py-0.5 rounded transition-colors">
                             {item.time}
                           </button>
                         </div>
                         <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <div className="w-5 h-5 rounded-full bg-primary-100 flex items-center justify-center text-[10px] font-bold text-primary-700">
-                              {item.speaker.charAt(0)}
-                            </div>
-                            <span className="font-bold text-slate-700 text-sm">{item.speaker}</span>
-                          </div>
                           {editingTranscriptId === item.id ? (
-                            <div className="flex gap-2">
+                            <div className="flex flex-col gap-2">
+                              <input value={editSpeaker} onChange={e => setEditSpeaker(e.target.value)}
+                                className="w-32 text-xs font-bold px-2 py-1 border border-primary-300 rounded outline-none" placeholder="Speaker" />
                               <textarea value={editText} onChange={e => setEditText(e.target.value)}
-                                className="flex-1 text-sm px-3 py-2 border border-primary-300 rounded-lg outline-none focus:ring-2 focus:ring-primary-500/20 resize-none"
+                                className="w-full text-sm px-3 py-2 border border-primary-300 rounded-lg outline-none focus:ring-2 focus:ring-primary-500/20 resize-none"
                                 rows={2} autoFocus />
-                              <div className="flex flex-col gap-1">
-                                <button onClick={() => saveTranscriptEdit(item.id)} className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors">
-                                  <Check size={14} />
-                                </button>
-                                <button onClick={() => setEditingTranscriptId(null)} className="p-1.5 text-slate-400 hover:bg-slate-100 rounded-lg transition-colors">
-                                  <X size={14} />
-                                </button>
+                              <div className="flex gap-2 justify-end">
+                                <button onClick={() => setEditingTranscriptId(null)} className="px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-100 rounded-lg">Batal</button>
+                                <button onClick={() => saveTranscriptEdit(item.id)} className="px-3 py-1.5 text-xs text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg flex items-center gap-1"><Check size={14} /> Simpan</button>
                               </div>
                             </div>
                           ) : (
-                            <p className="text-slate-600 leading-relaxed text-sm">{item.text}</p>
+                            <>
+                              <div className="flex items-center gap-2 mb-1">
+                                <div className="w-5 h-5 rounded-full bg-primary-100 flex items-center justify-center text-[10px] font-bold text-primary-700">
+                                  {item.speaker.charAt(0)}
+                                </div>
+                                <span className="font-bold text-slate-700 text-sm">{item.speaker}</span>
+                              </div>
+                              <p className="text-slate-600 leading-relaxed text-sm">{item.text}</p>
+                            </>
                           )}
                         </div>
                         <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 flex-shrink-0">
-                          <button onClick={() => { setEditingTranscriptId(item.id); setEditText(item.text); }}
-                            className="text-slate-400 hover:text-slate-600 p-1.5 hover:bg-slate-100 rounded-lg transition-colors">
+                          <button onClick={() => { setEditingTranscriptId(item.id); setEditText(item.text); setEditSpeaker(item.speaker); }}
+                            className="text-slate-400 hover:text-slate-600 p-1.5 hover:bg-slate-100 rounded-lg transition-colors" title="Edit Transkrip & Pembicara">
                             <Pencil size={13} />
-                          </button>
-                          <button className="text-slate-400 hover:text-slate-600 p-1.5 hover:bg-slate-100 rounded-lg transition-colors">
-                            <MoreVertical size={13} />
                           </button>
                         </div>
                       </div>
@@ -839,6 +856,44 @@ function MeetingDetail({ meeting, onBack }: { meeting: Meeting; onBack: () => vo
                         </div>
                       </div>
                     )}
+
+                    {/* Approval Workflow */}
+                    <div className="mt-8 pt-6 border-t border-slate-200">
+                      <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center justify-between">
+                        Persetujuan Notula
+                        <span className={cn('text-xs font-bold px-2 py-1 rounded-full', 
+                          !meeting.approvalStatus || meeting.approvalStatus === 'Draft' ? 'bg-slate-100 text-slate-600' :
+                          meeting.approvalStatus === 'Review' ? 'bg-blue-100 text-blue-700' :
+                          meeting.approvalStatus === 'Revision Required' ? 'bg-orange-100 text-orange-700' :
+                          'bg-emerald-100 text-emerald-700'
+                        )}>
+                          {meeting.approvalStatus || 'Draft'}
+                        </span>
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
+                        {(!meeting.approvalStatus || meeting.approvalStatus === 'Draft' || meeting.approvalStatus === 'Revision Required') && (
+                          <button onClick={() => handleApproval('Review')} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm">
+                            Submit for Approval
+                          </button>
+                        )}
+                        {meeting.approvalStatus === 'Review' && (
+                          <>
+                            <button onClick={() => handleApproval('Approved')} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center gap-1">
+                              <CheckCircle2 size={16} /> Approve
+                            </button>
+                            <button onClick={() => handleApproval('Revision Required')} className="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center gap-1">
+                              <X size={16} /> Request Revision
+                            </button>
+                          </>
+                        )}
+                        {meeting.approvalStatus === 'Approved' && (
+                          <div className="text-sm text-emerald-600 font-medium flex items-center gap-1">
+                            <CheckCircle2 size={16} /> Notula Resmi Telah Disetujui
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
                   </div>
                 )}
               </div>

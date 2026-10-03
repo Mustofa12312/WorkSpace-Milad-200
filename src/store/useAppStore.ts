@@ -6,6 +6,7 @@ export type Priority = 'Low' | 'Medium' | 'High' | 'Urgent';
 export type TaskStatus = 'backlog' | 'planned' | 'in_progress' | 'review' | 'completed';
 export type MeetingStatus = 'scheduled' | 'ongoing' | 'completed' | 'cancelled';
 export type MeetingType = 'Regular' | 'Emergency' | 'Planning' | 'Evaluation' | 'Project' | 'Internal' | 'External';
+export type ApprovalStatus = 'Draft' | 'Review' | 'Revision Required' | 'Approved' | 'Archived';
 
 export interface Task {
   id: string;
@@ -105,6 +106,7 @@ export interface Meeting {
   projectId?: string;
   organizationId?: string;
   createdAt?: string;
+  approvalStatus?: ApprovalStatus;
 }
 
 interface AppState {

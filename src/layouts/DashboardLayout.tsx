@@ -17,6 +17,7 @@ import ProjectsView from '../components/ProjectsView';
 import CalendarView from '../components/CalendarView';
 import DocumentsView from '../components/DocumentsView';
 import CommandPalette from '../components/CommandPalette';
+import DecisionLog from '../components/DecisionLog';
 import {
   LayoutDashboard,
   CalendarDays,
@@ -38,6 +39,7 @@ import {
   AlertCircle,
   ArrowRight,
   Sparkles,
+  Gavel,
 } from 'lucide-react';
 
 export default function DashboardLayout() {
@@ -143,6 +145,7 @@ export default function DashboardLayout() {
           <NavItem collapsed={isSidebarCollapsed} icon={<FolderKanban size={20} />} label="Projects" active={activeTab === 'projects'} onClick={() => { setActiveTab('projects'); setIsSidebarOpen(false); }} />
           <NavItem collapsed={isSidebarCollapsed} icon={<CheckSquare size={20} />} label="Tasks" active={activeTab === 'tasks'} onClick={() => { setActiveTab('tasks'); setIsSidebarOpen(false); }} />
           <NavItem collapsed={isSidebarCollapsed} icon={<CalendarDays size={20} />} label="Meetings" active={activeTab === 'meetings'} onClick={() => { setActiveTab('meetings'); setIsSidebarOpen(false); }} badge={upcomingMeetingsCount > 0 ? upcomingMeetingsCount : undefined} />
+          <NavItem collapsed={isSidebarCollapsed} icon={<Gavel size={20} />} label="Decisions" active={activeTab === 'decisions'} onClick={() => { setActiveTab('decisions'); setIsSidebarOpen(false); }} />
           <NavItem collapsed={isSidebarCollapsed} icon={<Calendar size={20} />} label="Calendar" active={activeTab === 'calendar'} onClick={() => { setActiveTab('calendar'); setIsSidebarOpen(false); }} />
           <NavItem collapsed={isSidebarCollapsed} icon={<FileText size={20} />} label="Documents" active={activeTab === 'documents'} onClick={() => { setActiveTab('documents'); setIsSidebarOpen(false); }} />
           <NavItem collapsed={isSidebarCollapsed} icon={<Users size={20} />} label="Team" active={activeTab === 'team'} onClick={() => { setActiveTab('team'); setIsSidebarOpen(false); }} />
@@ -410,6 +413,7 @@ export default function DashboardLayout() {
         {activeTab === 'meetings' && <MeetingRoom />}
         {activeTab === 'team' && <TeamManagement />}
         {activeTab === 'projects' && <ProjectsView />}
+        {activeTab === 'decisions' && <DecisionLog onNavigate={setActiveTab} />}
         {activeTab === 'calendar' && <CalendarView />}
         {activeTab === 'documents' && <DocumentsView />}
         {activeTab === 'settings' && <SettingsComponent />}
