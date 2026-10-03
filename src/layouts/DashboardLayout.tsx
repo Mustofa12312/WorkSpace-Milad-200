@@ -24,7 +24,12 @@ import {
 
 export default function DashboardLayout() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const { tasks, fetchTasks } = useAppStore();
+  const { tasks, events, fetchTasks } = useAppStore();
+  
+  const activeTasksCount = tasks.filter(t => t.status !== 'completed').length;
+  const pendingApprovalsCount = tasks.filter(t => t.status === 'review').length;
+  const upcomingMeetingsCount = events.length;
+  
   const priorityTasks = tasks.filter(t => t.priority === 'High' || t.priority === 'Urgent').slice(0, 3);
 
   React.useEffect(() => {
@@ -102,9 +107,9 @@ export default function DashboardLayout() {
 
               {/* Dashboard Stats */}
               <div className="grid grid-cols-3 gap-6">
-                <StatCard title="Active Tasks" value="24" trend="+3 this week" type="neutral" />
-                <StatCard title="Pending Approvals" value="5" trend="Needs attention" type="warning" />
-                <StatCard title="Upcoming Meetings" value="2" trend="Next at 2:00 PM" type="info" />
+                <StatCard title="Active Tasks" value={activeTasksCount.toString()} trend="In Progress" type="neutral" />
+                <StatCard title="Pending Approvals" value={pendingApprovalsCount.toString()} trend="Needs Review" type="warning" />
+                <StatCard title="Upcoming Meetings" value={upcomingMeetingsCount.toString()} trend="Scheduled" type="info" />
               </div>
 
               {/* AI Summary Banner */}

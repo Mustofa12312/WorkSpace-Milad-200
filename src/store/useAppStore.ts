@@ -24,6 +24,7 @@ export interface User {
   avatar?: string;
   role?: string;
   status?: string;
+  lastActive?: string;
 }
 
 export interface Project {
@@ -72,46 +73,40 @@ interface AppState {
   fetchTasks: () => Promise<void>;
 }
 
-const INITIAL_TASKS: Task[] = [
-  { id: 't1', title: 'Setup Firebase Auth', project: 'Engineering', priority: 'High', status: 'backlog', dueDate: 'Sep 12', comments: 3, attachments: 1, assignee: 'M' },
-  { id: 't2', title: 'Review PRD Document', project: 'Product', priority: 'Medium', status: 'planned', dueDate: 'Tomorrow', comments: 5, attachments: 2, assignee: 'A' },
-  { id: 't3', title: 'Finalize Q3 Budget', project: 'Finance', priority: 'Urgent', status: 'in_progress', dueDate: 'Today, 5:00 PM', comments: 12, attachments: 4, assignee: 'H' },
-  { id: 't4', title: 'Design System Update', project: 'Design', priority: 'Low', status: 'review', dueDate: 'Sep 15', comments: 2, attachments: 0, assignee: 'F' },
-  { id: 't5', title: 'Client Onboarding Meeting', project: 'Operations', priority: 'Medium', status: 'completed', dueDate: 'Sep 10', comments: 0, attachments: 1, assignee: 'S' },
-];
+const INITIAL_TASKS: Task[] = [];
 
 export const useAppStore = create<AppState>((set) => ({
   currentUser: null,
   tasks: INITIAL_TASKS,
   
-  projects: [
-    { id: '1', name: 'Milad 200 Main Event', status: 'Active', progress: 65, members: 12, dueDate: 'Oct 30, 2026', color: 'bg-indigo-500' },
-    { id: '2', name: 'Sponsorship & Finance', status: 'Active', progress: 40, members: 5, dueDate: 'Sep 15, 2026', color: 'bg-emerald-500' },
-    { id: '3', name: 'Marketing & PR', status: 'Planning', progress: 15, members: 8, dueDate: 'Dec 1, 2026', color: 'bg-amber-500' }
-  ],
-  documents: [
-    { id: '1', name: 'Proposal Milad 200 Final.pdf', type: 'pdf', size: '2.4 MB', date: 'Sep 28, 2026', owner: 'Mustofa' },
-    { id: '2', name: 'RAB Kegiatan (Revisi).xlsx', type: 'sheet', size: '156 KB', date: 'Sep 25, 2026', owner: 'Ahmad F.' }
-  ],
-  team: [
-    { id: '1', name: 'Mustofa', email: 'mustofa@milad200.com', role: 'Owner', status: 'Active' },
-    { id: '2', name: 'Ahmad', email: 'ahmad@milad200.com', role: 'Admin', status: 'Active' }
-  ],
-  events: [
-    { id: '1', title: 'Design Review', date: 5, time: '10:00 AM', color: 'bg-indigo-100 text-indigo-700' },
-    { id: '2', title: 'Submit Proposal', date: 12, time: '5:00 PM', color: 'bg-emerald-100 text-emerald-700' },
-    { id: '3', title: 'Weekly Sync', date: 12, time: '3:00 PM', color: 'bg-indigo-100 text-indigo-700' },
-    { id: '4', title: 'Vendor Meeting', date: 20, time: '1:00 PM', color: 'bg-indigo-100 text-indigo-700' }
-  ],
+  projects: [],
+  documents: [],
+  team: [],
+  events: [],
   
   setCurrentUser: (user) => set({ currentUser: user }),
   
   setTasks: (tasks) => set({ tasks }),
 
-  addProject: (project) => set((state) => ({ projects: [...state.projects, project] })),
-  addDocument: (doc) => set((state) => ({ documents: [...state.documents, doc] })),
-  addTeamMember: (member) => set((state) => ({ team: [...state.team, member] })),
-  addEvent: (event) => set((state) => ({ events: [...state.events, event] })),
+  addProject: async (project) => {
+    set((state) => ({ projects: [...state.projects, project] }));
+    try { await setDoc(doc(db, 'projects', project.id), project); } catch (e) { console.error("Firestore error:", e); }
+  },
+  
+  addDocument: async (docInfo) => {
+    set((state) => ({ documents: [...state.documents, docInfo] }));
+    try { await setDoc(doc(db, 'documents', docInfo.id), docInfo); } catch (e) { console.error("Firestore error:", e); }
+  },
+  
+  addTeamMember: async (member) => {
+    set((state) => ({ team: [...state.team, member] }));
+    try { await setDoc(doc(db, 'team', member.id), member); } catch (e) { console.error("Firestore error:", e); }
+  },
+  
+  addEvent: async (event) => {
+    set((state) => ({ events: [...state.events, event] }));
+    try { await setDoc(doc(db, 'events', event.id), event); } catch (e) { console.error("Firestore error:", e); }
+  },
   
   updateTaskStatus: async (taskId, newStatus) => {
     set((state) => ({
@@ -138,21 +133,38 @@ export const useAppStore = create<AppState>((set) => ({
 
   fetchTasks: async () => {
     try {
-      const querySnapshot = await getDocs(collection(db, 'tasks'));
-      const tasksList: Task[] = [];
-      querySnapshot.forEach((docSnap) => {
-        tasksList.push({ id: docSnap.id, ...docSnap.data() } as Task);
-      });
-      if (tasksList.length > 0) {
-        set({ tasks: tasksList });
-      } else {
-        // If empty, initialize with mock data so the board isn't empty on first run
-        INITIAL_TASKS.forEach(async (task) => {
-          await setDoc(doc(db, 'tasks', task.id), task).catch(() => {});
-        });
-      }
+      const getDocsSafe = async (col: string) => {
+        try {
+          const snap = await getDocs(collection(db, col));
+          return snap.docs;
+        } catch {
+          return [];
+        }
+      };
+
+      const [tasksDocs, projectsDocs, docsDocs, teamDocs, eventsDocs] = await Promise.all([
+        getDocsSafe('tasks'),
+        getDocsSafe('projects'),
+        getDocsSafe('documents'),
+        getDocsSafe('team'),
+        getDocsSafe('events')
+      ]);
+
+      const tasksList = tasksDocs.map(d => ({ id: d.id, ...(d.data() as object) } as Task));
+      const projectsList = projectsDocs.map(d => ({ id: d.id, ...(d.data() as object) } as Project));
+      const documentsList = docsDocs.map(d => ({ id: d.id, ...(d.data() as object) } as Document));
+      const teamList = teamDocs.map(d => ({ id: d.id, ...(d.data() as object) } as User));
+      const eventsList = eventsDocs.map(d => ({ id: d.id, ...(d.data() as object) } as Event));
+
+      // Always set state from Firestore so it reflects actual database
+      set({ tasks: tasksList });
+      set({ projects: projectsList });
+      set({ documents: documentsList });
+      set({ team: teamList });
+      set({ events: eventsList });
+
     } catch (error) {
-      console.error("Firestore fetch error (fallback to mock):", error);
+      console.error("Firestore sync fetch error:", error);
     }
   }
 }));

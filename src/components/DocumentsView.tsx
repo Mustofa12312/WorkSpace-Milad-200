@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Search, Filter, FileText, FileSpreadsheet, FileIcon, Download, MoreVertical, Upload } from 'lucide-react';
 
 import { useAppStore } from '../store/useAppStore';
@@ -5,23 +6,29 @@ import { useAppStore } from '../store/useAppStore';
 export default function DocumentsView() {
   const { documents, addDocument } = useAppStore();
 
-  const handleUpload = () => {
-    const name = window.prompt("Enter document name (e.g., Report.pdf):");
-    if (!name || name.trim() === '') return;
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [newDocName, setNewDocName] = useState('');
+
+  const handleUpload = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newDocName || newDocName.trim() === '') return;
     
     // Auto-detect type for icon
     let type = 'doc';
-    if (name.toLowerCase().endsWith('.pdf')) type = 'pdf';
-    if (name.toLowerCase().endsWith('.xlsx') || name.toLowerCase().endsWith('.csv')) type = 'sheet';
+    if (newDocName.toLowerCase().endsWith('.pdf')) type = 'pdf';
+    if (newDocName.toLowerCase().endsWith('.xlsx') || newDocName.toLowerCase().endsWith('.csv')) type = 'sheet';
 
     addDocument({
       id: `doc-${Date.now()}`,
-      name,
+      name: newDocName,
       type,
       size: '120 KB', // dummy size
       date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
       owner: 'Mustofa' // Should be currentUser.name ideally
     });
+    
+    setIsModalOpen(false);
+    setNewDocName('');
   };
   const getIcon = (type: string) => {
     switch(type) {
@@ -43,7 +50,7 @@ export default function DocumentsView() {
             <p className="text-slate-500 mt-1">Manage proposals, reports, and meeting minutes.</p>
           </div>
           <button 
-            onClick={handleUpload}
+            onClick={() => setIsModalOpen(true)}
             className="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-full font-medium flex items-center gap-2 shadow-sm shadow-primary-500/30 transition-all hover:shadow-md hover:-translate-y-0.5"
           >
             <Upload size={18} />
@@ -118,6 +125,32 @@ export default function DocumentsView() {
         </div>
 
       </div>
+
+      {/* Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+            <div className="p-6 border-b border-slate-100">
+              <h3 className="text-xl font-bold text-slate-800">Upload Document</h3>
+            </div>
+            <form onSubmit={handleUpload} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Document Name</label>
+                <input type="text" required value={newDocName} onChange={e => setNewDocName(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none" placeholder="e.g., Q3 Report.pdf" />
+                <p className="text-xs text-slate-500 mt-2">
+                  Tip: End the name with .pdf or .xlsx to get the correct icon automatically!
+                </p>
+              </div>
+              
+              <div className="pt-4 flex gap-3 justify-end">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 text-slate-600 font-medium hover:bg-slate-100 rounded-xl transition-colors">Cancel</button>
+                <button type="submit" className="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-xl transition-colors shadow-sm shadow-primary-500/30">Upload</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

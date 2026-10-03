@@ -12,18 +12,24 @@ import { useAppStore } from '../store/useAppStore';
 export default function TeamManagement() {
   const { team, addTeamMember } = useAppStore();
 
-  const handleInvite = () => {
-    const email = window.prompt("Enter new member's email address:");
-    if (!email || email.trim() === '') return;
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [newMember, setNewMember] = useState({ email: '', role: 'Member' });
+
+  const handleInvite = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMember.email || newMember.email.trim() === '') return;
     
     addTeamMember({
       id: `usr-${Date.now()}`,
-      name: email.split('@')[0],
-      email,
-      role: 'Member',
+      name: newMember.email.split('@')[0],
+      email: newMember.email,
+      role: newMember.role,
       status: 'Pending',
       lastActive: '-'
     });
+    
+    setIsModalOpen(false);
+    setNewMember({ email: '', role: 'Member' });
   };
 
   const getRoleIcon = (role: string = 'Member') => {
@@ -63,7 +69,7 @@ export default function TeamManagement() {
             <p className="text-slate-500 mt-1">Manage members, roles, and organization settings.</p>
           </div>
           <button 
-            onClick={handleInvite}
+            onClick={() => setIsModalOpen(true)}
             className="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-full font-medium flex items-center gap-2 shadow-sm shadow-primary-500/30 transition-all hover:shadow-md hover:-translate-y-0.5"
           >
             <UserPlus size={18} />
@@ -151,6 +157,37 @@ export default function TeamManagement() {
         </div>
 
       </div>
+
+      {/* Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+            <div className="p-6 border-b border-slate-100">
+              <h3 className="text-xl font-bold text-slate-800">Invite Team Member</h3>
+            </div>
+            <form onSubmit={handleInvite} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
+                <input type="email" required value={newMember.email} onChange={e => setNewMember({...newMember, email: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none" placeholder="e.g., alex@company.com" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Role</label>
+                <select value={newMember.role} onChange={e => setNewMember({...newMember, role: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none bg-white">
+                  <option value="Member">Member</option>
+                  <option value="Manager">Manager</option>
+                  <option value="Admin">Admin</option>
+                </select>
+              </div>
+              
+              <div className="pt-4 flex gap-3 justify-end">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 text-slate-600 font-medium hover:bg-slate-100 rounded-xl transition-colors">Cancel</button>
+                <button type="submit" className="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-xl transition-colors shadow-sm shadow-primary-500/30">Send Invite</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Search, Plus, Filter, MoreHorizontal, FolderKanban, Users, Clock } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -11,19 +12,36 @@ import { useAppStore } from '../store/useAppStore';
 export default function ProjectsView() {
   const { projects, addProject } = useAppStore();
 
-  const handleNewProject = () => {
-    const name = window.prompt("Enter new project name:");
-    if (!name || name.trim() === '') return;
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [newProject, setNewProject] = useState({ name: '', status: 'Planning', dueDate: '' });
+
+  const handleNewProject = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newProject.name || newProject.name.trim() === '') return;
+    
+    // Format date beautifully if provided
+    let formattedDate = 'TBD';
+    if (newProject.dueDate) {
+      const d = new Date(newProject.dueDate);
+      formattedDate = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+    
+    // Pick a random nice color
+    const colors = ['bg-blue-500', 'bg-indigo-500', 'bg-emerald-500', 'bg-amber-500', 'bg-purple-500', 'bg-rose-500'];
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
     
     addProject({
       id: `proj-${Date.now()}`,
-      name,
-      status: 'Planning',
+      name: newProject.name,
+      status: newProject.status,
       progress: 0,
       members: 1,
-      dueDate: 'TBD',
-      color: 'bg-blue-500'
+      dueDate: formattedDate,
+      color: randomColor
     });
+    
+    setIsModalOpen(false);
+    setNewProject({ name: '', status: 'Planning', dueDate: '' });
   };
   return (
     <div className="flex-1 overflow-y-auto p-8 bg-slate-50/50">
@@ -35,7 +53,7 @@ export default function ProjectsView() {
             <p className="text-slate-500 mt-1">Manage and track your organization's initiatives.</p>
           </div>
           <button 
-            onClick={handleNewProject}
+            onClick={() => setIsModalOpen(true)}
             className="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-full font-medium flex items-center gap-2 shadow-sm shadow-primary-500/30 transition-all hover:shadow-md hover:-translate-y-0.5"
           >
             <Plus size={18} />
@@ -113,6 +131,43 @@ export default function ProjectsView() {
         </div>
 
       </div>
+
+      {/* Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+            <div className="p-6 border-b border-slate-100">
+              <h3 className="text-xl font-bold text-slate-800">Create New Project</h3>
+            </div>
+            <form onSubmit={handleNewProject} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Project Name</label>
+                <input type="text" required value={newProject.name} onChange={e => setNewProject({...newProject, name: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none" placeholder="e.g., Q4 Marketing Campaign" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+                  <select value={newProject.status} onChange={e => setNewProject({...newProject, status: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none bg-white">
+                    <option value="Planning">Planning</option>
+                    <option value="Active">Active</option>
+                    <option value="Completed">Completed</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Due Date</label>
+                  <input type="date" value={newProject.dueDate} onChange={e => setNewProject({...newProject, dueDate: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none" />
+                </div>
+              </div>
+              
+              <div className="pt-4 flex gap-3 justify-end">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 text-slate-600 font-medium hover:bg-slate-100 rounded-xl transition-colors">Cancel</button>
+                <button type="submit" className="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-xl transition-colors shadow-sm shadow-primary-500/30">Create Project</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

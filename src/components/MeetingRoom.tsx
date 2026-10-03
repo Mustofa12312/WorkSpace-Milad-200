@@ -23,6 +23,8 @@ function cn(...inputs: ClassValue[]) {
 
 type RecordingState = 'idle' | 'recording' | 'paused' | 'finished';
 
+import { useAppStore } from '../store/useAppStore';
+
 const TRANSCRIPT_MOCK = [
   { id: 1, time: '19:12', speaker: 'Ahmad', text: 'Untuk kegiatan seminar bulan depan, bagaimana progres persiapan tempatnya?' },
   { id: 2, time: '19:14', speaker: 'Mustofa', text: 'Saya sudah menghubungi pihak gedung, mereka meminta DP 50% minggu ini agar jadwal bisa dikunci.' },
@@ -290,7 +292,23 @@ export default function MeetingRoom() {
                         <span className="flex items-center gap-1 text-red-500"><Calendar size={12}/> Deadline: Jumat</span>
                       </div>
                       <div className="mt-3">
-                        <button className="text-xs bg-white border border-slate-200 hover:bg-primary-50 hover:text-primary-600 hover:border-primary-200 transition-colors px-3 py-1.5 rounded-lg font-medium">
+                        <button 
+                          onClick={() => {
+                            useAppStore.getState().addTask({
+                              id: `task-${Date.now()}`,
+                              title: 'Membuat proposal singkat kegiatan seminar',
+                              project: 'Seminar',
+                              priority: 'High',
+                              status: 'backlog',
+                              dueDate: 'Jumat',
+                              comments: 0,
+                              attachments: 0,
+                              assignee: 'Ahmad'
+                            });
+                            alert('Task added to Kanban Board!');
+                          }}
+                          className="text-xs bg-white border border-slate-200 hover:bg-primary-50 hover:text-primary-600 hover:border-primary-200 transition-colors px-3 py-1.5 rounded-lg font-medium"
+                        >
                           + Add to Kanban Board
                         </button>
                       </div>

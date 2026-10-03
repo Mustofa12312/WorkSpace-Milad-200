@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useAppStore, type Task, type TaskStatus } from '../store/useAppStore';
+import { useAppStore, type Task, type TaskStatus, type Priority } from '../store/useAppStore';
 import { Plus, MoreHorizontal, Calendar, MessageSquare, Paperclip, AlertCircle, GripVertical } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -19,21 +19,38 @@ const COLUMNS: { id: TaskStatus; title: string; color: string }[] = [
 export default function KanbanBoard() {
   const { tasks, updateTaskStatus, addTask } = useAppStore();
   
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [newTask, setNewTask] = useState({ title: '', project: 'General', priority: 'Medium', status: 'backlog' as TaskStatus, dueDate: '' });
+
   const handleQuickAdd = (status: TaskStatus = 'backlog') => {
-    const title = window.prompt("Enter new task title:");
-    if (!title || title.trim() === '') return;
+    setNewTask({ title: '', project: 'General', priority: 'Medium', status, dueDate: '' });
+    setIsModalOpen(true);
+  };
+
+  const handleSaveTask = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTask.title || newTask.title.trim() === '') return;
+    
+    let formattedDate = 'No date';
+    if (newTask.dueDate) {
+      const d = new Date(newTask.dueDate);
+      formattedDate = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
     
     addTask({
       id: `task-${Date.now()}`,
-      title,
-      project: 'General',
-      priority: 'Medium',
-      status,
-      dueDate: 'No date',
+      title: newTask.title,
+      project: newTask.project,
+      priority: newTask.priority as Priority,
+      status: newTask.status,
+      dueDate: formattedDate,
       comments: 0,
       attachments: 0,
       assignee: 'M'
     });
+    
+    setIsModalOpen(false);
+    setNewTask({ title: '', project: 'General', priority: 'Medium', status: 'backlog', dueDate: '' });
   };
   
   // Basic drag state for native HTML5 drag and drop
@@ -155,6 +172,56 @@ export default function KanbanBoard() {
           );
         })}
       </div>
+
+      {/* Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+              <h3 className="text-xl font-bold text-slate-800">Create New Task</h3>
+            </div>
+            <form onSubmit={handleSaveTask} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Task Title</label>
+                <input type="text" required value={newTask.title} onChange={e => setNewTask({...newTask, title: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none" placeholder="e.g., Design homepage mockup" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Project Name</label>
+                  <input type="text" value={newTask.project} onChange={e => setNewTask({...newTask, project: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none" placeholder="e.g., General" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Priority</label>
+                  <select value={newTask.priority} onChange={e => setNewTask({...newTask, priority: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none bg-white">
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                    <option value="Urgent">Urgent</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+                  <select value={newTask.status} onChange={e => setNewTask({...newTask, status: e.target.value as TaskStatus})} className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none bg-white">
+                    {COLUMNS.map(col => (
+                      <option key={col.id} value={col.id}>{col.title.replace(/[^a-zA-Z ]/g, '').trim()}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Due Date</label>
+                  <input type="date" value={newTask.dueDate} onChange={e => setNewTask({...newTask, dueDate: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none" />
+                </div>
+              </div>
+              
+              <div className="pt-4 flex gap-3 justify-end">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 text-slate-600 font-medium hover:bg-slate-100 rounded-xl transition-colors">Cancel</button>
+                <button type="submit" className="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-xl transition-colors shadow-sm shadow-primary-500/30">Create Task</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

@@ -14,12 +14,12 @@ export default function Auth() {
   const navigate = useNavigate();
   const { setCurrentUser } = useAppStore();
 
-  const handleAuthSuccess = (user: any) => {
+  const handleAuthSuccess = (user: import('firebase/auth').User | Record<string, unknown>) => {
     setCurrentUser({
-      id: user.uid,
-      name: user.displayName || user.email?.split('@')[0] || 'User',
-      email: user.email || '',
-      avatar: user.photoURL || undefined
+      id: ('uid' in user ? user.uid : user.id) as string,
+      name: (user as import('firebase/auth').User).displayName || (user.email as string)?.split('@')[0] || 'User',
+      email: (user.email as string) || '',
+      avatar: (user as import('firebase/auth').User).photoURL || undefined
     });
     navigate('/dashboard');
   };
@@ -37,11 +37,12 @@ export default function Auth() {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         handleAuthSuccess(userCredential.user);
       }
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || 'Authentication failed. Check Firebase keys.');
+    } catch (err: unknown) {
+      const error = err as Error & { code?: string };
+      console.error(error);
+      setError(error.message || 'Authentication failed. Check Firebase keys.');
       // For MVP showcase purposes, if Firebase fails due to dummy keys or missing config, we still simulate login:
-      if (err.code === 'auth/invalid-api-key' || err.code === 'auth/configuration-not-found' || err.code === 'auth/invalid-credential') {
+      if (error.code === 'auth/invalid-api-key' || error.code === 'auth/configuration-not-found' || error.code === 'auth/invalid-credential') {
         setTimeout(() => {
           handleAuthSuccess({ uid: 'mvp-user', email });
         }, 1000);
@@ -57,9 +58,10 @@ export default function Auth() {
     try {
       const userCredential = await signInWithPopup(auth, provider);
       handleAuthSuccess(userCredential.user);
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || 'Google Auth failed.');
+    } catch (err: unknown) {
+      const error = err as Error;
+      console.error(error);
+      setError(error.message || 'Google Auth failed.');
     }
   };
 
