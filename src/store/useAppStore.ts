@@ -1,13 +1,16 @@
 import { create } from 'zustand';
 import { db } from '../lib/firebase';
-import { collection, doc, onSnapshot, query, setDoc, updateDoc, where } from 'firebase/firestore';
+import { collection, doc, onSnapshot, query, setDoc, updateDoc, where, deleteDoc } from 'firebase/firestore';
 
 export type Priority = 'Low' | 'Medium' | 'High' | 'Urgent';
 export type TaskStatus = 'backlog' | 'planned' | 'in_progress' | 'review' | 'completed';
+export type MeetingStatus = 'scheduled' | 'ongoing' | 'completed' | 'cancelled';
+export type MeetingType = 'Regular' | 'Emergency' | 'Planning' | 'Evaluation' | 'Project' | 'Internal' | 'External';
 
 export interface Task {
   id: string;
   title: string;
+  description?: string;
   project: string;
   priority: Priority;
   status: TaskStatus;
@@ -15,7 +18,10 @@ export interface Task {
   comments: number;
   attachments: number;
   assignee: string;
+  checklist?: { id: string; text: string; done: boolean }[];
   organizationId?: string;
+  createdAt?: string;
+  meetingId?: string; // linked meeting source
 }
 
 export interface User {
@@ -32,6 +38,7 @@ export interface User {
 export interface Project {
   id: string;
   name: string;
+  description?: string;
   status: string;
   progress: number;
   members: number;
@@ -60,6 +67,46 @@ export interface Event {
   organizationId?: string;
 }
 
+export interface AgendaItem {
+  id: string;
+  title: string;
+  description?: string;
+  presenter?: string;
+  duration?: number; // minutes
+}
+
+export interface TranscriptLine {
+  id: string;
+  time: string;
+  speaker: string;
+  text: string;
+}
+
+export interface Meeting {
+  id: string;
+  title: string;
+  type: MeetingType;
+  status: MeetingStatus;
+  date: string;        // ISO date string e.g. "2026-10-04"
+  startTime: string;   // e.g. "19:00"
+  endTime: string;     // e.g. "20:30"
+  location?: string;
+  onlineMeetingUrl?: string;
+  organizer: string;   // user id
+  chairperson?: string;
+  secretary?: string;
+  participants: string[]; // user ids or names
+  agenda: AgendaItem[];
+  transcript?: TranscriptLine[];
+  summary?: string;
+  decisions?: string[];
+  actionItems?: { id: string; task: string; assignee: string; deadline: string }[];
+  recordingUrl?: string;
+  projectId?: string;
+  organizationId?: string;
+  createdAt?: string;
+}
+
 interface AppState {
   currentOrgId: string;
   orgName: string;
@@ -69,6 +116,7 @@ interface AppState {
   documents: Document[];
   team: User[];
   events: Event[];
+  meetings: Meeting[];
   
   setCurrentUser: (user: User | null) => void;
   setCurrentOrgId: (orgId: string) => void;
@@ -76,27 +124,33 @@ interface AppState {
   setTasks: (tasks: Task[]) => void;
   updateTaskStatus: (taskId: string, newStatus: TaskStatus) => void;
   addTask: (task: Task) => void;
+  updateTask: (taskId: string, updates: Partial<Task>) => void;
+  deleteTask: (taskId: string) => void;
   addProject: (project: Project) => void;
   deleteProject: (projectId: string) => void;
   addDocument: (doc: Document) => void;
+  deleteDocument: (docId: string) => void;
   addTeamMember: (member: User) => void;
   addEvent: (event: Event) => void;
+  addMeeting: (meeting: Meeting) => void;
+  updateMeeting: (meetingId: string, updates: Partial<Meeting>) => void;
+  deleteMeeting: (meetingId: string) => void;
   setupSubscriptions: () => void;
   teardownSubscriptions: () => void;
 }
 
-const INITIAL_TASKS: Task[] = [];
 let unsubscribers: (() => void)[] = [];
 
 export const useAppStore = create<AppState>((set, get) => ({
   currentOrgId: 'default-org-1',
   orgName: 'Milad 200',
   currentUser: null,
-  tasks: INITIAL_TASKS,
+  tasks: [],
   projects: [],
   documents: [],
   team: [],
   events: [],
+  meetings: [],
   
   setCurrentOrgId: (orgId) => {
     set({ currentOrgId: orgId });
@@ -104,59 +158,78 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   setOrgName: (name) => set({ orgName: name }),
-
   setCurrentUser: (user) => set({ currentUser: user }),
   setTasks: (tasks) => set({ tasks }),
 
   addProject: async (project) => {
     const orgId = get().currentOrgId;
-    const projectWithOrg = { ...project, organizationId: orgId };
-    try { await setDoc(doc(db, 'projects', project.id), projectWithOrg); } catch (e) { console.error("Firestore error:", e); }
+    try { await setDoc(doc(db, 'projects', project.id), { ...project, organizationId: orgId }); }
+    catch (e) { console.error('Firestore error:', e); }
   },
   
   deleteProject: async (projectId) => {
-    try { 
-      // Firestore import required for deleteDoc
-      const { deleteDoc } = await import('firebase/firestore');
-      await deleteDoc(doc(db, 'projects', projectId)); 
-    } catch (e) { console.error("Firestore error:", e); }
+    try { await deleteDoc(doc(db, 'projects', projectId)); }
+    catch (e) { console.error('Firestore error:', e); }
   },
   
   addDocument: async (docInfo) => {
     const orgId = get().currentOrgId;
-    const docWithOrg = { ...docInfo, organizationId: orgId };
-    try { await setDoc(doc(db, 'documents', docInfo.id), docWithOrg); } catch (e) { console.error("Firestore error:", e); }
+    try { await setDoc(doc(db, 'documents', docInfo.id), { ...docInfo, organizationId: orgId }); }
+    catch (e) { console.error('Firestore error:', e); }
+  },
+
+  deleteDocument: async (docId) => {
+    try { await deleteDoc(doc(db, 'documents', docId)); }
+    catch (e) { console.error('Firestore error:', e); }
   },
   
   addTeamMember: async (member) => {
     const orgId = get().currentOrgId;
-    const memberWithOrg = { ...member, organizationId: orgId };
-    try { await setDoc(doc(db, 'team', member.id), memberWithOrg); } catch (e) { console.error("Firestore error:", e); }
+    try { await setDoc(doc(db, 'team', member.id), { ...member, organizationId: orgId }); }
+    catch (e) { console.error('Firestore error:', e); }
   },
   
   addEvent: async (event) => {
     const orgId = get().currentOrgId;
-    const eventWithOrg = { ...event, organizationId: orgId };
-    try { await setDoc(doc(db, 'events', event.id), eventWithOrg); } catch (e) { console.error("Firestore error:", e); }
+    try { await setDoc(doc(db, 'events', event.id), { ...event, organizationId: orgId }); }
+    catch (e) { console.error('Firestore error:', e); }
+  },
+
+  addMeeting: async (meeting) => {
+    const orgId = get().currentOrgId;
+    try { await setDoc(doc(db, 'meetings', meeting.id), { ...meeting, organizationId: orgId, createdAt: new Date().toISOString() }); }
+    catch (e) { console.error('Firestore error:', e); }
+  },
+
+  updateMeeting: async (meetingId, updates) => {
+    try { await updateDoc(doc(db, 'meetings', meetingId), updates as Record<string, unknown>); }
+    catch (e) { console.error('Firestore error:', e); }
+  },
+
+  deleteMeeting: async (meetingId) => {
+    try { await deleteDoc(doc(db, 'meetings', meetingId)); }
+    catch (e) { console.error('Firestore error:', e); }
   },
   
   updateTaskStatus: async (taskId, newStatus) => {
-    try {
-      const taskRef = doc(db, 'tasks', taskId);
-      await updateDoc(taskRef, { status: newStatus });
-    } catch (error) {
-      console.error("Firestore sync error:", error);
-    }
+    try { await updateDoc(doc(db, 'tasks', taskId), { status: newStatus }); }
+    catch (error) { console.error('Firestore sync error:', error); }
   },
 
   addTask: async (task) => {
     const orgId = get().currentOrgId;
-    const taskWithOrg = { ...task, organizationId: orgId };
-    try {
-      await setDoc(doc(db, 'tasks', task.id), taskWithOrg);
-    } catch (error) {
-      console.error("Firestore sync error:", error);
-    }
+    try { await setDoc(doc(db, 'tasks', task.id), { ...task, organizationId: orgId, createdAt: new Date().toISOString() }); }
+    catch (error) { console.error('Firestore sync error:', error); }
+  },
+
+  updateTask: async (taskId, updates) => {
+    try { await updateDoc(doc(db, 'tasks', taskId), updates as Record<string, unknown>); }
+    catch (error) { console.error('Firestore sync error:', error); }
+  },
+
+  deleteTask: async (taskId) => {
+    try { await deleteDoc(doc(db, 'tasks', taskId)); }
+    catch (error) { console.error('Firestore sync error:', error); }
   },
 
   teardownSubscriptions: () => {
@@ -166,12 +239,8 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   setupSubscriptions: () => {
     const orgId = get().currentOrgId;
-
-    // Clear old subscriptions
     get().teardownSubscriptions();
 
-    // Filter on the server with where(): Firestore security rules are not
-    // filters, so an unscoped collection read would be rejected outright.
     const subscribeToCollection = (colName: string, stateKey: keyof AppState) => {
       const scoped = query(collection(db, colName), where('organizationId', '==', orgId));
       const unsubscribe = onSnapshot(scoped, (snapshot) => {
@@ -188,5 +257,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     subscribeToCollection('documents', 'documents');
     subscribeToCollection('team', 'team');
     subscribeToCollection('events', 'events');
+    subscribeToCollection('meetings', 'meetings');
   }
 }));

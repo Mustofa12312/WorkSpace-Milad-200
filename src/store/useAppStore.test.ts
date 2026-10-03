@@ -53,7 +53,7 @@ describe('useAppStore — writes', () => {
     expect(fs.doc).toHaveBeenCalledWith(expect.anything(), 'tasks', 'task-1');
     expect(fs.setDoc).toHaveBeenCalledWith(
       { path: 'tasks/task-1' },
-      { ...sampleTask, organizationId: 'org-A' },
+      expect.objectContaining({ ...sampleTask, organizationId: 'org-A' }),
     );
   });
 
@@ -87,7 +87,7 @@ describe('useAppStore — realtime subscriptions', () => {
     useAppStore.setState({ currentOrgId: 'org-A' });
     useAppStore.getState().setupSubscriptions();
 
-    expect(fs.listeners.map((l) => l.col).sort()).toEqual(['documents', 'events', 'projects', 'tasks', 'team']);
+    expect(fs.listeners.map((l) => l.col).sort()).toEqual(['documents', 'events', 'meetings', 'projects', 'tasks', 'team']);
     expect(fs.where).toHaveBeenCalledWith('organizationId', '==', 'org-A');
     expect(fs.listeners.every((l) => l.orgId === 'org-A')).toBe(true);
   });

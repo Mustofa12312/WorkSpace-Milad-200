@@ -116,6 +116,13 @@ service cloud.firestore {
       allow delete: if inMyOrg(resource.data) && isManager();
     }
 
+    match /meetings/{id} {
+      allow read: if inMyOrg(resource.data);
+      allow create: if inMyOrg(request.resource.data);
+      allow update: if inMyOrg(resource.data) && orgUnchanged();
+      allow delete: if inMyOrg(resource.data) && isManager();
+    }
+
     // Everything else is denied by default (no catch-all match).
   }
 }
