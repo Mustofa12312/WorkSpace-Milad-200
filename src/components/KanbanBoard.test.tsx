@@ -40,6 +40,9 @@ beforeEach(() => {
       makeTask({ id: 'a', title: 'Book venue', status: 'backlog' }),
       makeTask({ id: 'b', title: 'Write proposal', status: 'in_progress' }),
     ],
+    projects: [
+      { id: 'p1', name: 'Test Project', status: 'Planning', progress: 0, members: 1, dueDate: 'No date', color: 'bg-blue-500', organizationId: 'default-org-1' }
+    ],
     addTask,
     updateTaskStatus,
   });

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Plus, Filter, MoreHorizontal, FolderKanban, Users, Clock } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -10,10 +10,19 @@ function cn(...inputs: ClassValue[]) {
 import { useAppStore } from '../store/useAppStore';
 
 export default function ProjectsView() {
-  const { projects, addProject } = useAppStore();
+  const { projects, addProject, deleteProject } = useAppStore();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newProject, setNewProject] = useState({ name: '', status: 'Planning', dueDate: '' });
+  
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+
+  // Close menu on click outside
+  useEffect(() => {
+    const closeMenu = () => setActiveMenuId(null);
+    document.addEventListener('click', closeMenu);
+    return () => document.removeEventListener('click', closeMenu);
+  }, []);
 
   const handleNewProject = (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,14 +56,14 @@ export default function ProjectsView() {
     <div className="flex-1 overflow-y-auto p-8 bg-slate-50/50">
       <div className="max-w-6xl mx-auto">
         
-        <div className="flex justify-between items-end mb-8">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-end mb-8 gap-4">
           <div>
-            <h2 className="text-3xl font-bold text-slate-800 tracking-tight">Projects</h2>
-            <p className="text-slate-500 mt-1">Manage and track your organization's initiatives.</p>
+            <h2 className="text-2xl md:text-3xl font-bold text-slate-800 tracking-tight">Projects</h2>
+            <p className="text-slate-500 mt-1 text-sm md:text-base">Manage and track your organization's initiatives.</p>
           </div>
           <button 
             onClick={() => setIsModalOpen(true)}
-            className="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-full font-medium flex items-center gap-2 shadow-sm shadow-primary-500/30 transition-all hover:shadow-md hover:-translate-y-0.5"
+            className="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-xl md:rounded-full font-medium flex items-center justify-center gap-2 shadow-sm shadow-primary-500/30 transition-all hover:shadow-md hover:-translate-y-0.5 outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
           >
             <Plus size={18} />
             New Project
@@ -98,13 +107,36 @@ export default function ProjectsView() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {projects.map(project => (
               <div key={project.id} className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow group cursor-pointer flex flex-col">
-                <div className="flex justify-between items-start mb-4">
+              <div className="flex justify-between items-start mb-4 relative">
                   <div className={cn("h-12 w-12 rounded-xl flex items-center justify-center text-white shadow-sm", project.color)}>
                     <FolderKanban size={24} />
                   </div>
-                  <button className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 outline-none focus-visible:ring-2 focus-visible:ring-primary-500">
-                    <MoreHorizontal size={20} />
-                  </button>
+                  
+                  <div className="relative">
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveMenuId(activeMenuId === project.id ? null : project.id);
+                      }}
+                      className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                    >
+                      <MoreHorizontal size={20} />
+                    </button>
+                    {activeMenuId === project.id && (
+                      <div className="absolute right-0 mt-2 w-36 bg-white rounded-xl shadow-lg border border-slate-200 py-1 z-10">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteProject(project.id);
+                            setActiveMenuId(null);
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                        >
+                          Hapus Proyek
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 
                 <div className="mb-1 flex items-center gap-2">

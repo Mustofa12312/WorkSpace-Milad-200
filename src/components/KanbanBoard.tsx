@@ -33,10 +33,16 @@ const COLUMNS: { id: TaskStatus; title: string; color: string }[] = [
 ];
 
 export default function KanbanBoard() {
-  const { tasks, updateTaskStatus, addTask } = useAppStore();
+  const { tasks, updateTaskStatus, addTask, projects } = useAppStore();
   
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newTask, setNewTask] = useState({ title: '', project: 'General', priority: 'Medium', status: 'backlog' as TaskStatus, dueDate: '' });
+  const [newTask, setNewTask] = useState({ 
+    title: '', 
+    projectId: '', // use empty string initially to prompt selection
+    priority: 'Medium', 
+    status: 'backlog' as TaskStatus, 
+    dueDate: '' 
+  });
   
   const [searchTerm, setSearchTerm] = useState('');
   
@@ -51,7 +57,7 @@ export default function KanbanBoard() {
   }, [isModalOpen]);
 
   const handleQuickAdd = (status: TaskStatus = 'backlog') => {
-    setNewTask({ title: '', project: 'General', priority: 'Medium', status, dueDate: '' });
+    setNewTask({ title: '', projectId: projects.length > 0 ? projects[0].id : '', priority: 'Medium', status, dueDate: '' });
     setIsModalOpen(true);
   };
 
@@ -65,10 +71,13 @@ export default function KanbanBoard() {
       formattedDate = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     }
     
+    const selectedProject = projects.find(p => p.id === newTask.projectId);
+    const projectName = selectedProject ? selectedProject.name : 'General';
+    
     addTask({
       id: `task-${Date.now()}`,
       title: newTask.title,
-      project: newTask.project,
+      project: projectName, // Save the actual project name
       priority: newTask.priority as Priority,
       status: newTask.status,
       dueDate: formattedDate,
@@ -78,7 +87,7 @@ export default function KanbanBoard() {
     });
     
     setIsModalOpen(false);
-    setNewTask({ title: '', project: 'General', priority: 'Medium', status: 'backlog', dueDate: '' });
+    setNewTask({ title: '', projectId: '', priority: 'Medium', status: 'backlog', dueDate: '' });
   };
   
   // --- DND Kit Setup ---
@@ -213,8 +222,19 @@ export default function KanbanBoard() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Project Name</label>
-                  <input type="text" value={newTask.project} onChange={e => setNewTask({...newTask, project: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:border-primary-500 focus:ring-primary-500/20 outline-none transition-all" placeholder="e.g., General" />
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Project</label>
+                  <select 
+                    required
+                    value={newTask.projectId} 
+                    onChange={e => setNewTask({...newTask, projectId: e.target.value})} 
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:border-primary-500 focus:ring-primary-500/20 outline-none bg-white transition-all"
+                  >
+                    <option value="" disabled>Select a project</option>
+                    {projects.map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                    {projects.length === 0 && <option value="general">General (No Projects)</option>}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Priority</label>

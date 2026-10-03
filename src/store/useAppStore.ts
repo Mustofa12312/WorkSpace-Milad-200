@@ -77,6 +77,7 @@ interface AppState {
   updateTaskStatus: (taskId: string, newStatus: TaskStatus) => void;
   addTask: (task: Task) => void;
   addProject: (project: Project) => void;
+  deleteProject: (projectId: string) => void;
   addDocument: (doc: Document) => void;
   addTeamMember: (member: User) => void;
   addEvent: (event: Event) => void;
@@ -111,6 +112,14 @@ export const useAppStore = create<AppState>((set, get) => ({
     const orgId = get().currentOrgId;
     const projectWithOrg = { ...project, organizationId: orgId };
     try { await setDoc(doc(db, 'projects', project.id), projectWithOrg); } catch (e) { console.error("Firestore error:", e); }
+  },
+  
+  deleteProject: async (projectId) => {
+    try { 
+      // Firestore import required for deleteDoc
+      const { deleteDoc } = await import('firebase/firestore');
+      await deleteDoc(doc(db, 'projects', projectId)); 
+    } catch (e) { console.error("Firestore error:", e); }
   },
   
   addDocument: async (docInfo) => {
