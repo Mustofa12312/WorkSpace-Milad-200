@@ -24,7 +24,7 @@ import {
 
 export default function DashboardLayout() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const { tasks, events, fetchTasks } = useAppStore();
+  const { tasks, events, setupSubscriptions } = useAppStore();
   
   const activeTasksCount = tasks.filter(t => t.status !== 'completed').length;
   const pendingApprovalsCount = tasks.filter(t => t.status === 'review').length;
@@ -33,8 +33,8 @@ export default function DashboardLayout() {
   const priorityTasks = tasks.filter(t => t.priority === 'High' || t.priority === 'Urgent').slice(0, 3);
 
   React.useEffect(() => {
-    fetchTasks();
-  }, [fetchTasks]);
+    setupSubscriptions();
+  }, [setupSubscriptions]);
 
   return (
     <div className="flex h-screen bg-slate-50 text-slate-900">

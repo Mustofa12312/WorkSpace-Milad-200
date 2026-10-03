@@ -77,16 +77,16 @@ interface AppState {
   addDocument: (doc: Document) => void;
   addTeamMember: (member: User) => void;
   addEvent: (event: Event) => void;
-  fetchTasks: () => Promise<void>;
+  setupSubscriptions: () => void;
 }
 
 const INITIAL_TASKS: Task[] = [];
+let unsubscribers: (() => void)[] = [];
 
 export const useAppStore = create<AppState>((set, get) => ({
   currentOrgId: 'default-org-1',
   currentUser: null,
   tasks: INITIAL_TASKS,
-  
   projects: [],
   documents: [],
   team: [],
@@ -94,45 +94,37 @@ export const useAppStore = create<AppState>((set, get) => ({
   
   setCurrentOrgId: (orgId) => {
     set({ currentOrgId: orgId });
-    get().fetchTasks();
+    get().setupSubscriptions();
   },
 
   setCurrentUser: (user) => set({ currentUser: user }),
-  
   setTasks: (tasks) => set({ tasks }),
 
   addProject: async (project) => {
     const orgId = get().currentOrgId;
     const projectWithOrg = { ...project, organizationId: orgId };
-    set((state) => ({ projects: [...state.projects, projectWithOrg] }));
     try { await setDoc(doc(db, 'projects', project.id), projectWithOrg); } catch (e) { console.error("Firestore error:", e); }
   },
   
   addDocument: async (docInfo) => {
     const orgId = get().currentOrgId;
     const docWithOrg = { ...docInfo, organizationId: orgId };
-    set((state) => ({ documents: [...state.documents, docWithOrg] }));
     try { await setDoc(doc(db, 'documents', docInfo.id), docWithOrg); } catch (e) { console.error("Firestore error:", e); }
   },
   
   addTeamMember: async (member) => {
     const orgId = get().currentOrgId;
     const memberWithOrg = { ...member, organizationId: orgId };
-    set((state) => ({ team: [...state.team, memberWithOrg] }));
     try { await setDoc(doc(db, 'team', member.id), memberWithOrg); } catch (e) { console.error("Firestore error:", e); }
   },
   
   addEvent: async (event) => {
     const orgId = get().currentOrgId;
     const eventWithOrg = { ...event, organizationId: orgId };
-    set((state) => ({ events: [...state.events, eventWithOrg] }));
     try { await setDoc(doc(db, 'events', event.id), eventWithOrg); } catch (e) { console.error("Firestore error:", e); }
   },
   
   updateTaskStatus: async (taskId, newStatus) => {
-    set((state) => ({
-      tasks: state.tasks.map(t => t.id === taskId ? { ...t, status: newStatus } : t)
-    }));
     try {
       const taskRef = doc(db, 'tasks', taskId);
       await updateDoc(taskRef, { status: newStatus });
@@ -144,9 +136,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   addTask: async (task) => {
     const orgId = get().currentOrgId;
     const taskWithOrg = { ...task, organizationId: orgId };
-    set((state) => ({
-      tasks: [...state.tasks, taskWithOrg]
-    }));
     try {
       await setDoc(doc(db, 'tasks', task.id), taskWithOrg);
     } catch (error) {
@@ -154,47 +143,31 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
-  fetchTasks: async () => {
+  setupSubscriptions: () => {
     const orgId = get().currentOrgId;
-    try {
-      const getDocsSafe = async (col: string) => {
-        try {
-          // Note: In a real app with proper Firebase Indexes, we should use:
-          // query(collection(db, col), where("organizationId", "==", orgId))
-          // For MVP without creating indexes manually, we fetch all and filter in memory:
-          const snap = await getDocs(collection(db, col));
-          return snap.docs.filter(d => {
-            const data = d.data();
-            return !data.organizationId || data.organizationId === orgId;
-          });
-        } catch {
-          return [];
-        }
-      };
+    
+    // Clear old subscriptions
+    unsubscribers.forEach(unsub => unsub());
+    unsubscribers = [];
 
-      const [tasksDocs, projectsDocs, docsDocs, teamDocs, eventsDocs] = await Promise.all([
-        getDocsSafe('tasks'),
-        getDocsSafe('projects'),
-        getDocsSafe('documents'),
-        getDocsSafe('team'),
-        getDocsSafe('events')
-      ]);
+    const subscribeToCollection = (colName: string, stateKey: keyof AppState) => {
+      import('firebase/firestore').then(({ collection, onSnapshot }) => {
+        const unsubscribe = onSnapshot(collection(db, colName), (snapshot) => {
+          const list = snapshot.docs
+            .map(d => ({ id: d.id, ...(d.data() as object) }))
+            .filter((data: any) => !data.organizationId || data.organizationId === orgId);
+          set({ [stateKey]: list });
+        }, (error) => {
+          console.error(`Error syncing ${colName}:`, error);
+        });
+        unsubscribers.push(unsubscribe);
+      });
+    };
 
-      const tasksList = tasksDocs.map(d => ({ id: d.id, ...(d.data() as object) } as Task));
-      const projectsList = projectsDocs.map(d => ({ id: d.id, ...(d.data() as object) } as Project));
-      const documentsList = docsDocs.map(d => ({ id: d.id, ...(d.data() as object) } as Document));
-      const teamList = teamDocs.map(d => ({ id: d.id, ...(d.data() as object) } as User));
-      const eventsList = eventsDocs.map(d => ({ id: d.id, ...(d.data() as object) } as Event));
-
-      // Always set state from Firestore so it reflects actual database
-      set({ tasks: tasksList });
-      set({ projects: projectsList });
-      set({ documents: documentsList });
-      set({ team: teamList });
-      set({ events: eventsList });
-
-    } catch (error) {
-      console.error("Firestore sync fetch error:", error);
-    }
+    subscribeToCollection('tasks', 'tasks');
+    subscribeToCollection('projects', 'projects');
+    subscribeToCollection('documents', 'documents');
+    subscribeToCollection('team', 'team');
+    subscribeToCollection('events', 'events');
   }
 }));

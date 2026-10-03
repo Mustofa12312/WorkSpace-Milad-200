@@ -2,33 +2,52 @@ import { useState } from 'react';
 import { Search, Filter, FileText, FileSpreadsheet, FileIcon, Download, MoreVertical, Upload } from 'lucide-react';
 
 import { useAppStore } from '../store/useAppStore';
+import { storage } from '../lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 export default function DocumentsView() {
   const { documents, addDocument } = useAppStore();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newDocName, setNewDocName] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
-  const handleUpload = (e: React.FormEvent) => {
+  const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newDocName || newDocName.trim() === '') return;
+    if (!newDocName || newDocName.trim() === '' || !selectedFile) return;
     
-    // Auto-detect type for icon
+    setIsUploading(true);
     let type = 'doc';
-    if (newDocName.toLowerCase().endsWith('.pdf')) type = 'pdf';
-    if (newDocName.toLowerCase().endsWith('.xlsx') || newDocName.toLowerCase().endsWith('.csv')) type = 'sheet';
+    if (newDocName.toLowerCase().endsWith('.pdf') || selectedFile.name.endsWith('.pdf')) type = 'pdf';
+    if (newDocName.toLowerCase().endsWith('.xlsx') || newDocName.toLowerCase().endsWith('.csv') || selectedFile.name.endsWith('.xlsx')) type = 'sheet';
 
-    addDocument({
-      id: `doc-${Date.now()}`,
-      name: newDocName,
-      type,
-      size: '120 KB', // dummy size
-      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      owner: 'Mustofa' // Should be currentUser.name ideally
-    });
-    
-    setIsModalOpen(false);
-    setNewDocName('');
+    try {
+      const storageRef = ref(storage, `documents/${Date.now()}_${selectedFile.name}`);
+      await uploadBytes(storageRef, selectedFile);
+      const url = await getDownloadURL(storageRef);
+      
+      const fileSizeKB = Math.round(selectedFile.size / 1024);
+      
+      addDocument({
+        id: `doc-${Date.now()}`,
+        name: newDocName,
+        type,
+        size: `${fileSizeKB} KB`,
+        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        owner: 'Mustofa', // Ideally from currentUser
+        // In a real app we would save the URL too: url: url
+      });
+      
+      setIsModalOpen(false);
+      setNewDocName('');
+      setSelectedFile(null);
+    } catch (err) {
+      console.error("Upload failed", err);
+      alert("Failed to upload document");
+    } finally {
+      setIsUploading(false);
+    }
   };
   const getIcon = (type: string) => {
     switch(type) {
@@ -137,14 +156,18 @@ export default function DocumentsView() {
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Document Name</label>
                 <input type="text" required value={newDocName} onChange={e => setNewDocName(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none" placeholder="e.g., Q3 Report.pdf" />
-                <p className="text-xs text-slate-500 mt-2">
-                  Tip: End the name with .pdf or .xlsx to get the correct icon automatically!
-                </p>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Select File</label>
+                <input type="file" required onChange={e => setSelectedFile(e.target.files ? e.target.files[0] : null)} className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none" />
               </div>
               
               <div className="pt-4 flex gap-3 justify-end">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 text-slate-600 font-medium hover:bg-slate-100 rounded-xl transition-colors">Cancel</button>
-                <button type="submit" className="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-xl transition-colors shadow-sm shadow-primary-500/30">Upload</button>
+                <button type="submit" disabled={isUploading} className="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-xl transition-colors shadow-sm shadow-primary-500/30 disabled:opacity-50">
+                  {isUploading ? 'Uploading...' : 'Upload'}
+                </button>
               </div>
             </form>
           </div>
