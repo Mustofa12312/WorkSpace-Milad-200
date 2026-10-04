@@ -372,7 +372,14 @@ function MeetingDetail({ meeting, onBack }: { meeting: Meeting; onBack: () => vo
   const [activeTab, setActiveTab] = useState<ActiveTab>('transcript');
   const [isGenerating, setIsGenerating] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recognitionRef = useRef<any>(null);
+  const transcriptRef = useRef<TranscriptLine[]>(meeting.transcript || []);
   const [transcript, setTranscript] = useState<TranscriptLine[]>(meeting.transcript || []);
+
+  useEffect(() => {
+    transcriptRef.current = transcript;
+  }, [transcript]);
   const [summary, setSummary] = useState(meeting.summary || '');
   const [decisions, setDecisions] = useState<string[]>(meeting.decisions || []);
   const [actionItems, setActionItems] = useState(meeting.actionItems || []);
@@ -425,19 +432,74 @@ function MeetingDetail({ meeting, onBack }: { meeting: Meeting; onBack: () => vo
           const url = await getDownloadURL(storageRef);
           await updateMeeting(meeting.id, { recordingUrl: url, status: 'completed' });
           toast.success('Rekaman tersimpan!');
-          // Load mock transcript after recording
-          const newTranscript = MOCK_TRANSCRIPT;
-          setTranscript(newTranscript);
-          await updateMeeting(meeting.id, { transcript: newTranscript });
         } catch (e) {
           console.error('Upload failed', e);
-          toast.error('Gagal mengunggah rekaman.');
+          toast.error('Gagal mengunggah rekaman. Namun transkrip tetap disimpan.');
+        }
+
+        // Save transcript
+        const finalTranscript = transcriptRef.current;
+        if (finalTranscript.length === 0) {
+          setTranscript(MOCK_TRANSCRIPT);
+          await updateMeeting(meeting.id, { transcript: MOCK_TRANSCRIPT });
+        } else {
+          await updateMeeting(meeting.id, { transcript: finalTranscript });
         }
       };
       setMediaRecorder(recorder);
       recorder.start();
       setRecordingState('recording');
       await updateMeeting(meeting.id, { status: 'ongoing' });
+
+      // Start Realtime Transcription
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        const recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'id-ID';
+        
+        let currentLineId = `line-${Date.now()}`;
+        
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        recognition.onresult = (event: any) => {
+          let interim = '';
+          let final = '';
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) final += event.results[i][0].transcript;
+            else interim += event.results[i][0].transcript;
+          }
+          
+          const text = final || interim;
+          if (!text) return;
+          
+          const me = useAppStore.getState().currentUser?.name || 'Speaker';
+          const now = new Date();
+          const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
+          
+          setTranscript(prev => {
+            const existingIdx = prev.findIndex(t => t.id === currentLineId);
+            const newLine = { id: currentLineId, time: timeStr, speaker: me, text };
+            if (existingIdx >= 0) {
+              const updated = [...prev];
+              updated[existingIdx] = newLine;
+              return updated;
+            }
+            return [...prev, newLine];
+          });
+          
+          if (final) {
+            currentLineId = `line-${Date.now()}`;
+          }
+        };
+        
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        recognition.onerror = (e: any) => console.error('Speech recognition error', e);
+        recognition.start();
+        recognitionRef.current = recognition;
+      }
+
     } catch (e) {
       console.error('Microphone access denied', e);
       toast.error('Akses mikrofon diperlukan.');
@@ -449,16 +511,21 @@ function MeetingDetail({ meeting, onBack }: { meeting: Meeting; onBack: () => vo
       mediaRecorder.stop();
       mediaRecorder.stream.getTracks().forEach(t => t.stop());
     }
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
     setRecordingState('finished');
   };
 
   const pauseRecording = () => {
     if (mediaRecorder?.state === 'recording') mediaRecorder.pause();
+    if (recognitionRef.current) recognitionRef.current.stop();
     setRecordingState('paused');
   };
 
   const resumeRecording = () => {
     if (mediaRecorder?.state === 'paused') mediaRecorder.resume();
+    if (recognitionRef.current) recognitionRef.current.start();
     setRecordingState('recording');
   };
 
