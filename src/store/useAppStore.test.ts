@@ -74,10 +74,10 @@ describe('useAppStore — writes', () => {
     expect(fs.updateDoc).toHaveBeenCalledWith({ path: 'tasks/task-1' }, { status: 'review' });
   });
 
-  it('swallows Firestore errors instead of crashing the UI', async () => {
+  it('throws Firestore errors so the UI can handle them', async () => {
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     fs.setDoc.mockRejectedValueOnce(new Error('permission-denied'));
-    await expect(useAppStore.getState().addTask(sampleTask)).resolves.toBeUndefined();
+    await expect(useAppStore.getState().addTask(sampleTask)).rejects.toThrow('permission-denied');
     expect(consoleSpy).toHaveBeenCalled();
   });
 });
