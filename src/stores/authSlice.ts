@@ -12,7 +12,7 @@ export interface AuthSlice {
 }
 
 export const createAuthSlice: StateCreator<AppState, [], [], AuthSlice> = (set, get) => ({
-  currentOrgId: 'default-org-1',
+  currentOrgId: '',
   orgName: 'Milad 200',
   currentUser: null,
   

@@ -2,7 +2,7 @@ import type { StateCreator } from 'zustand';
 import type { User, Invitation } from '../types';
 import type { AppState } from '../store/useAppStore';
 import { db } from '../lib/firebase';
-import { doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import { logAuditAction } from '../lib/audit';
 
@@ -11,6 +11,7 @@ export interface TeamSlice {
   invitations: Invitation[];
   addTeamMember: (member: User) => void;
   removeTeamMember: (memberId: string) => void;
+  updateTeamMemberRole: (memberId: string, role: string) => Promise<void>;
   createInvitation: (email: string, role: string) => Promise<string>;
   deleteInvitation: (id: string) => void;
 }
@@ -44,6 +45,21 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (_set,
     } catch (err) { const e = err as Error; 
       console.error('Firestore error:', e);
       toast.error(e.message || 'Gagal menambahkan anggota');
+      throw e;
+    }
+  },
+
+  updateTeamMemberRole: async (memberId, role) => {
+    const user = get().currentUser;
+    const orgId = user?.organizationId || get().currentOrgId;
+    try {
+      await updateDoc(doc(db, 'team', memberId), { role });
+      toast.success('Role anggota berhasil diubah');
+      if (user) logAuditAction(orgId, user, 'UPDATE', 'Team', memberId, `Updated role to ${role}`);
+    } catch (err) {
+      const e = err as Error;
+      console.error('Firestore error:', e);
+      toast.error(e.message || 'Gagal mengubah role anggota');
       throw e;
     }
   },

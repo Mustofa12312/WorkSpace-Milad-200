@@ -1,9 +1,7 @@
 import type { User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import type { User } from '../store/useAppStore';
-
-export const DEFAULT_ORG_ID = 'default-org-1';
 
 /**
  * Ensures the signed-in user has a `team/{uid}` document and returns their
@@ -29,16 +27,49 @@ export async function ensureTeamMember(user: FirebaseUser): Promise<User> {
       const data = snap.data() as Partial<User>;
       return { ...profile, role: data.role, organizationId: data.organizationId };
     }
+    let role = 'Owner';
+    let organizationId = user.uid; // default: own workspace
+    let usedInviteId: string | undefined = undefined;
+
+    const pendingInviteId = sessionStorage.getItem('pendingInviteId');
+    if (pendingInviteId) {
+      try {
+        const inviteRef = doc(db, 'invitations', pendingInviteId);
+        const inviteSnap = await getDoc(inviteRef);
+        if (inviteSnap.exists()) {
+          const inviteData = inviteSnap.data();
+          if (inviteData.email.toLowerCase() === email.toLowerCase()) {
+            role = inviteData.role;
+            organizationId = inviteData.organizationId;
+            usedInviteId = pendingInviteId;
+          }
+        }
+      } catch (err) {
+        console.error('Failed to verify invitation:', err);
+      }
+    }
+
     const record = {
       id: profile.id,
       name: profile.name,
       email,
-      role: 'Member',
+      role,
       status: 'Active',
-      organizationId: DEFAULT_ORG_ID,
+      organizationId,
       lastActive: new Date().toISOString(),
+      ...(usedInviteId ? { inviteId: usedInviteId } : {})
     };
     await setDoc(userRef, record);
+    
+    if (usedInviteId) {
+      try {
+        await deleteDoc(doc(db, 'invitations', usedInviteId));
+      } catch (err) {
+        console.error('Failed to delete invitation:', err);
+      }
+    }
+    
+    sessionStorage.removeItem('pendingInviteId');
     return { ...profile, role: record.role, organizationId: record.organizationId };
   } catch (err) {
     console.error('Failed to provision user in team:', err);

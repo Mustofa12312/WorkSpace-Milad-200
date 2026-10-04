@@ -29,6 +29,14 @@ export default function TeamManagement() {
     memberId: null,
     memberName: ''
   });
+  
+  // Role Update State
+  const [roleUpdateDialog, setRoleUpdateDialog] = useState<{ isOpen: boolean; memberId: string | null; memberName: string; currentRole: string }>({
+    isOpen: false,
+    memberId: null,
+    memberName: '',
+    currentRole: 'Member'
+  });
 
   // Handle outside click for kebab menu
   useEffect(() => {
@@ -85,6 +93,20 @@ export default function TeamManagement() {
       }
     }
     setConfirmDialog({ isOpen: false, memberId: null, memberName: '' });
+  };
+
+  const handleUpdateRole = async (newRole: string) => {
+    if (roleUpdateDialog.memberId) {
+      try {
+        const { updateTeamMemberRole } = useAppStore.getState();
+        if (updateTeamMemberRole) {
+          await updateTeamMemberRole(roleUpdateDialog.memberId, newRole);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    setRoleUpdateDialog({ isOpen: false, memberId: null, memberName: '', currentRole: 'Member' });
   };
 
   const getRoleIcon = (role: string = 'Member') => {
@@ -188,10 +210,18 @@ export default function TeamManagement() {
                     </button>
                     {activeMenuId === member.id && (
                       <div ref={menuRef} className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-lg py-1 z-10 animate-in fade-in zoom-in-95 duration-100">
-                        <button className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2">
-                          <Edit2 size={16} className="text-slate-400" />
-                          Ubah Role
-                        </button>
+                        {!member.id.startsWith('inv-') && (
+                          <button 
+                            onClick={() => {
+                              setActiveMenuId(null);
+                              setRoleUpdateDialog({ isOpen: true, memberId: member.id, memberName: member.name, currentRole: member.role || 'Member' });
+                            }}
+                            className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                          >
+                            <Edit2 size={16} className="text-slate-400" />
+                            Ubah Role
+                          </button>
+                        )}
                         <button 
                           onClick={() => {
                             setActiveMenuId(null);
@@ -273,10 +303,18 @@ export default function TeamManagement() {
                     
                     {activeMenuId === member.id && (
                       <div ref={menuRef} className="absolute right-6 top-10 mt-1 w-48 bg-white border border-slate-200 rounded-xl shadow-lg py-1 z-10 animate-in fade-in zoom-in-95 duration-100">
-                        <button className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2">
-                          <Edit2 size={16} className="text-slate-400" />
-                          Ubah Role
-                        </button>
+                        {!member.id.startsWith('inv-') && (
+                          <button 
+                            onClick={() => {
+                              setActiveMenuId(null);
+                              setRoleUpdateDialog({ isOpen: true, memberId: member.id, memberName: member.name, currentRole: member.role || 'Member' });
+                            }}
+                            className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                          >
+                            <Edit2 size={16} className="text-slate-400" />
+                            Ubah Role
+                          </button>
+                        )}
                         <button 
                           onClick={() => {
                             setActiveMenuId(null);
@@ -354,6 +392,60 @@ export default function TeamManagement() {
                   className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white font-medium rounded-xl transition-colors shadow-sm shadow-red-600/30 outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"
                 >
                   Ya, Keluarkan
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Update Role Dialog */}
+      {roleUpdateDialog.isOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-6">
+              <h3 className="text-lg font-bold text-slate-900 mb-2">Ubah Role Anggota</h3>
+              <p className="text-sm text-slate-500 mb-4">
+                Pilih role baru untuk <strong>{roleUpdateDialog.memberName}</strong>.
+              </p>
+              
+              <div className="space-y-3 mb-6">
+                {['Owner', 'Admin', 'Manager', 'Member', 'Viewer'].map((role) => (
+                  <label key={role} className="flex items-center gap-3 p-3 border rounded-xl cursor-pointer hover:bg-slate-50 transition-colors">
+                    <input 
+                      type="radio" 
+                      name="role" 
+                      value={role} 
+                      checked={roleUpdateDialog.currentRole === role}
+                      onChange={(e) => setRoleUpdateDialog({ ...roleUpdateDialog, currentRole: e.target.value })}
+                      className="text-primary-600 focus:ring-primary-500"
+                    />
+                    <div>
+                      <div className="font-semibold text-slate-800 text-sm">{role}</div>
+                      <div className="text-xs text-slate-500">
+                        {role === 'Owner' && 'Akses penuh ke seluruh sistem dan pengaturan.'}
+                        {role === 'Admin' && 'Akses ke seluruh fitur dan dapat mengundang tim.'}
+                        {role === 'Manager' && 'Dapat membuat dan mengatur proyek/tugas.'}
+                        {role === 'Member' && 'Akses standar untuk mengerjakan tugas.'}
+                        {role === 'Viewer' && 'Hanya dapat melihat tanpa bisa mengubah.'}
+                      </div>
+                    </div>
+                  </label>
+                ))}
+              </div>
+              
+              <div className="flex w-full gap-3">
+                <button 
+                  onClick={() => setRoleUpdateDialog({ isOpen: false, memberId: null, memberName: '', currentRole: 'Member' })} 
+                  className="flex-1 py-2.5 text-slate-700 font-medium bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+                >
+                  Batal
+                </button>
+                <button 
+                  onClick={() => handleUpdateRole(roleUpdateDialog.currentRole)}
+                  className="flex-1 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-xl transition-colors shadow-sm shadow-primary-600/30 outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
+                >
+                  Simpan Perubahan
                 </button>
               </div>
             </div>

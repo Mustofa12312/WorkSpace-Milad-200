@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Mail, Lock, ArrowRight } from 'lucide-react';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { useSearchParams } from 'react-router-dom';
 import { auth } from '../lib/firebase';
 import { toAuthMessage } from '../lib/authErrors';
 
@@ -13,6 +14,14 @@ export default function Auth() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [searchParams] = useSearchParams();
+  const inviteId = searchParams.get('inviteId');
+
+  useEffect(() => {
+    if (inviteId) {
+      sessionStorage.setItem('pendingInviteId', inviteId);
+    }
+  }, [inviteId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,7 +63,9 @@ export default function Auth() {
             Milad 200
           </h1>
           <p className="text-slate-500 mt-2 font-medium">
-            {isLogin ? 'Welcome back to your workspace' : 'Create your organization account'}
+            {inviteId 
+              ? 'You have been invited to join a workspace' 
+              : isLogin ? 'Welcome back to your workspace' : 'Create your organization account'}
           </p>
         </div>
 
