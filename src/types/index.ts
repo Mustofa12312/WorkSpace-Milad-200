@@ -21,12 +21,21 @@ export interface Task {
   meetingId?: string;
 }
 
+export interface Invitation {
+  id: string;
+  organizationId: string;
+  role: string;
+  email: string;
+  createdAt: string;
+  expiresAt: string;
+}
+
 export interface User {
   id: string;
   name: string;
   email: string;
   avatar?: string;
-  role?: string;
+  role?: string; // 'Owner' | 'Admin' | 'Manager' | 'Member' | 'Viewer'
   status?: string;
   lastActive?: string;
   organizationId?: string;

@@ -32,7 +32,7 @@ service cloud.firestore {
     function myOrg() { return me().organizationId; }
     function isManager() { return me().role in ['Owner', 'Admin']; }
     function isOwner() { return me().role == 'Owner'; }
-    function validRole(role) { return role in ['Owner', 'Admin', 'Manager', 'Member']; }
+    function validRole(role) { return role in ['Owner', 'Admin', 'Manager', 'Member', 'Viewer']; }
 
     function inMyOrg(data) {
       return hasProfile() && data.organizationId is string && data.organizationId == myOrg();
@@ -42,6 +42,8 @@ service cloud.firestore {
       return request.resource.data.organizationId == resource.data.organizationId;
     }
     function canGrant(role) { return validRole(role) && (role != 'Owner' || isOwner()); }
+
+    function canEdit() { return me().role != 'Viewer'; }
 
     // ── Team / user profiles ────────────────────────────────────────────────
     match /team/{memberId} {
@@ -90,36 +92,44 @@ service cloud.firestore {
 
     match /tasks/{id} {
       allow read: if inMyOrg(resource.data);
-      allow create: if inMyOrg(request.resource.data);
-      allow update: if inMyOrg(resource.data) && orgUnchanged();
+      allow create: if inMyOrg(request.resource.data) && canEdit();
+      allow update: if inMyOrg(resource.data) && orgUnchanged() && canEdit();
       allow delete: if inMyOrg(resource.data) && isManager();
     }
 
     match /projects/{id} {
       allow read: if inMyOrg(resource.data);
-      allow create: if inMyOrg(request.resource.data);
-      allow update: if inMyOrg(resource.data) && orgUnchanged();
+      allow create: if inMyOrg(request.resource.data) && canEdit();
+      allow update: if inMyOrg(resource.data) && orgUnchanged() && canEdit();
       allow delete: if inMyOrg(resource.data) && isManager();
     }
 
     match /documents/{id} {
       allow read: if inMyOrg(resource.data);
-      allow create: if inMyOrg(request.resource.data);
-      allow update: if inMyOrg(resource.data) && orgUnchanged();
+      allow create: if inMyOrg(request.resource.data) && canEdit();
+      allow update: if inMyOrg(resource.data) && orgUnchanged() && canEdit();
       allow delete: if inMyOrg(resource.data) && isManager();
     }
 
     match /events/{id} {
       allow read: if inMyOrg(resource.data);
-      allow create: if inMyOrg(request.resource.data);
-      allow update: if inMyOrg(resource.data) && orgUnchanged();
+      allow create: if inMyOrg(request.resource.data) && canEdit();
+      allow update: if inMyOrg(resource.data) && orgUnchanged() && canEdit();
       allow delete: if inMyOrg(resource.data) && isManager();
     }
 
     match /meetings/{id} {
       allow read: if inMyOrg(resource.data);
-      allow create: if inMyOrg(request.resource.data);
-      allow update: if inMyOrg(resource.data) && orgUnchanged();
+      allow create: if inMyOrg(request.resource.data) && canEdit();
+      allow update: if inMyOrg(resource.data) && orgUnchanged() && canEdit();
+      allow delete: if inMyOrg(resource.data) && isManager();
+    }
+
+    match /invitations/{id} {
+      allow get: if true; // Anyone with the link can fetch the invitation
+      allow list: if inMyOrg(resource.data) && isManager();
+      allow create: if inMyOrg(request.resource.data) && isManager();
+      allow update: if false;
       allow delete: if inMyOrg(resource.data) && isManager();
     }
 

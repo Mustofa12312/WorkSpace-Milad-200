@@ -11,7 +11,7 @@ function cn(...inputs: ClassValue[]) {
 import { useAppStore } from '../store/useAppStore';
 
 export default function TeamManagement() {
-  const { team, addTeamMember, currentUser } = useAppStore();
+  const { team, invitations, createInvitation, deleteInvitation, currentUser } = useAppStore();
 
   const myRole = team.find(t => t.id === currentUser?.id)?.role || 'Member';
   const canInvite = myRole === 'Owner' || myRole === 'Admin';
@@ -41,29 +41,48 @@ export default function TeamManagement() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleInvite = (e: React.FormEvent) => {
+  const displayTeam = [
+    ...team,
+    ...invitations.map(inv => ({
+      id: inv.id,
+      name: inv.email.split('@')[0],
+      email: inv.email,
+      role: inv.role,
+      status: 'Pending',
+      lastActive: '-'
+    }))
+  ];
+
+  const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMember.email || newMember.email.trim() === '') return;
     
-    addTeamMember({
-      id: `usr-${Date.now()}`,
-      name: newMember.email.split('@')[0],
-      email: newMember.email,
-      role: newMember.role,
-      status: 'Pending',
-      lastActive: '-'
-    });
-    
-    setIsModalOpen(false);
-    setNewMember({ email: '', role: 'Member' });
-    toast.success('Undangan berhasil dikirim!');
+    try {
+      await createInvitation(newMember.email, newMember.role);
+      setIsModalOpen(false);
+      setNewMember({ email: '', role: 'Member' });
+    } catch (error) {
+      console.error(error);
+    }
   };
   
-  const handleRemoveMember = () => {
+  const handleRemoveMember = async () => {
     if (confirmDialog.memberId) {
-      // In a real app we would call an API or store action here
-      // removeTeamMember(confirmDialog.memberId);
-      toast.success(`${confirmDialog.memberName} berhasil dikeluarkan dari tim.`);
+      try {
+        if (confirmDialog.memberId.startsWith('inv-')) {
+          await deleteInvitation(confirmDialog.memberId);
+        } else {
+          // In a full app, you might use a removeTeamMember function here
+          const { removeTeamMember } = useAppStore.getState();
+          if (removeTeamMember) {
+            await removeTeamMember(confirmDialog.memberId);
+          } else {
+            toast.success(`${confirmDialog.memberName} berhasil dikeluarkan dari tim.`);
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      }
     }
     setConfirmDialog({ isOpen: false, memberId: null, memberName: '' });
   };
@@ -131,6 +150,7 @@ export default function TeamManagement() {
               <option>Admin</option>
               <option>Manager</option>
               <option>Member</option>
+              <option>Viewer</option>
             </select>
             <select className="flex-1 md:flex-none bg-white border border-slate-200 text-slate-600 text-sm rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-primary-500/20">
               <option>All Status</option>
@@ -145,7 +165,7 @@ export default function TeamManagement() {
           
           {/* Mobile View (Stacked Cards) */}
           <div className="md:hidden divide-y divide-slate-100">
-            {team.map((member) => (
+            {displayTeam.map((member) => (
               <div key={member.id} className="p-4 flex flex-col gap-3">
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-3">
@@ -213,7 +233,7 @@ export default function TeamManagement() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {team.map((member) => (
+              {displayTeam.map((member) => (
                 <tr key={member.id} className="hover:bg-slate-50/50 transition-colors group">
                   <td className="py-4 px-6">
                     <div className="flex items-center gap-3">
@@ -296,6 +316,7 @@ export default function TeamManagement() {
                   <option value="Member">Member</option>
                   <option value="Manager">Manager</option>
                   <option value="Admin">Admin</option>
+                  <option value="Viewer">Viewer</option>
                 </select>
               </div>
               

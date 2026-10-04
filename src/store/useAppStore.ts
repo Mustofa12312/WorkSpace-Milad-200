@@ -63,6 +63,7 @@ export const useAppStore = create<AppState>()((...a) => {
       subscribeToCollection('team', 'team');
       subscribeToCollection('events', 'events');
       subscribeToCollection('meetings', 'meetings');
+      subscribeToCollection('invitations', 'invitations');
     }
   };
 });

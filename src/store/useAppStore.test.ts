@@ -87,7 +87,7 @@ describe('useAppStore — realtime subscriptions', () => {
     useAppStore.setState({ currentOrgId: 'org-A' });
     useAppStore.getState().setupSubscriptions();
 
-    expect(fs.listeners.map((l) => l.col).sort()).toEqual(['documents', 'events', 'meetings', 'projects', 'tasks', 'team']);
+    expect(fs.listeners.map((l) => l.col).sort()).toEqual(['documents', 'events', 'invitations', 'meetings', 'projects', 'tasks', 'team']);
     expect(fs.where).toHaveBeenCalledWith('organizationId', '==', 'org-A');
     expect(fs.listeners.every((l) => l.orgId === 'org-A')).toBe(true);
   });
