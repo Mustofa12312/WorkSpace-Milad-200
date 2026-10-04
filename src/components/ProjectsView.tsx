@@ -10,7 +10,7 @@ function cn(...inputs: ClassValue[]) {
 import { useAppStore, type Project } from '../store/useAppStore';
 
 export default function ProjectsView() {
-  const { projects, tasks, addProject, deleteProject } = useAppStore();
+  const { projects, tasks, addProject, deleteProject, searchFocus, setSearchFocus } = useAppStore();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newProject, setNewProject] = useState({ name: '', status: 'Planning', dueDate: '', description: '' });
@@ -18,6 +18,19 @@ export default function ProjectsView() {
   const [detailProject, setDetailProject] = useState<Project | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Handle global search focus
+  useEffect(() => {
+    if (searchFocus?.type === 'project') {
+      const project = projects.find(p => p.id === searchFocus.id);
+      if (project) {
+        setTimeout(() => {
+          setDetailProject(project);
+          setSearchFocus(null);
+        }, 0);
+      }
+    }
+  }, [searchFocus, projects, setSearchFocus]);
 
   // Close menu on click outside
   useEffect(() => {

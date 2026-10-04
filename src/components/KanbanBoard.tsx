@@ -33,7 +33,7 @@ const COLUMNS: { id: TaskStatus; title: string; color: string }[] = [
 ];
 
 export default function KanbanBoard() {
-  const { tasks, updateTaskStatus, addTask, projects } = useAppStore();
+  const { tasks, updateTaskStatus, addTask, projects, searchFocus, setSearchFocus } = useAppStore();
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [detailTask, setDetailTask] = useState<Task | null>(null);
@@ -46,6 +46,20 @@ export default function KanbanBoard() {
   });
   
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Handle global search focus
+  useEffect(() => {
+    if (searchFocus?.type === 'task') {
+      const task = tasks.find(t => t.id === searchFocus.id);
+      if (task) {
+        setTimeout(() => {
+          setDetailTask(task);
+          // Clear focus so it doesn't re-trigger
+          setSearchFocus(null);
+        }, 0);
+      }
+    }
+  }, [searchFocus, tasks, setSearchFocus]);
   
   // A11y Focus trap and Esc key for Modal
   const modalRef = useRef<HTMLDivElement>(null);

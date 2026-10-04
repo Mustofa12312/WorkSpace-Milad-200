@@ -1027,9 +1027,23 @@ function MeetingDetail({ meeting, onBack }: { meeting: Meeting; onBack: () => vo
 // ─── Main Export ──────────────────────────────────────────────────────────────
 
 export default function MeetingRoom() {
-  const { meetings } = useAppStore();
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const { meetings, searchFocus, setSearchFocus } = useAppStore();
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
+
+  // Handle global search focus
+  useEffect(() => {
+    if (searchFocus?.type === 'meeting') {
+      const meet = meetings.find(m => m.id === searchFocus.id);
+      if (meet) {
+        setTimeout(() => {
+          setSelectedMeeting(meet);
+          setViewMode('detail');
+          setSearchFocus(null);
+        }, 0);
+      }
+    }
+  }, [searchFocus, meetings, setSearchFocus]);
 
   // Keep selected meeting in sync with Firestore updates
   const liveSelectedMeeting = selectedMeeting

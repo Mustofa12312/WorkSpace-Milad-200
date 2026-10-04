@@ -22,7 +22,7 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }: CommandP
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
-  const { tasks, projects, meetings, team } = useAppStore();
+  const { tasks, projects, meetings, team, setSearchFocus } = useAppStore();
 
   useEffect(() => {
     if (isOpen) {
@@ -57,28 +57,28 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }: CommandP
       results.push({
         id: t.id, type: 'task', title: t.title, subtitle: `Task · ${t.project} · ${t.status}`,
         icon: <CheckSquare size={15} className="text-primary-500" />,
-        onSelect: () => { onNavigate('tasks'); onClose(); }
+        onSelect: () => { setSearchFocus({ type: 'task', id: t.id }); onNavigate('tasks'); onClose(); }
       });
     });
     projects.filter(p => p.name.toLowerCase().includes(q)).slice(0, 3).forEach(p => {
       results.push({
         id: p.id, type: 'project', title: p.name, subtitle: `Proyek · ${p.status}`,
         icon: <FolderKanban size={15} className="text-emerald-500" />,
-        onSelect: () => { onNavigate('projects'); onClose(); }
+        onSelect: () => { setSearchFocus({ type: 'project', id: p.id }); onNavigate('projects'); onClose(); }
       });
     });
     meetings.filter(m => m.title.toLowerCase().includes(q)).slice(0, 3).forEach(m => {
       results.push({
         id: m.id, type: 'meeting', title: m.title, subtitle: `Rapat · ${m.date} · ${m.status}`,
         icon: <CalendarDays size={15} className="text-indigo-500" />,
-        onSelect: () => { onNavigate('meetings'); onClose(); }
+        onSelect: () => { setSearchFocus({ type: 'meeting', id: m.id }); onNavigate('meetings'); onClose(); }
       });
     });
     team.filter(u => u.name.toLowerCase().includes(q)).slice(0, 3).forEach(u => {
       results.push({
         id: u.id, type: 'member', title: u.name, subtitle: `Anggota · ${u.role || 'Member'}`,
         icon: <Users size={15} className="text-amber-500" />,
-        onSelect: () => { onNavigate('team'); onClose(); }
+        onSelect: () => { setSearchFocus({ type: 'member', id: u.id }); onNavigate('team'); onClose(); }
       });
     });
   }

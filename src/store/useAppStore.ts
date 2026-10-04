@@ -17,8 +17,10 @@ import type { EventSlice } from '../stores/eventSlice';
 import { createEventSlice } from '../stores/eventSlice';
 import type { MeetingSlice } from '../stores/meetingSlice';
 import { createMeetingSlice } from '../stores/meetingSlice';
+import type { UiSlice } from '../stores/uiSlice';
+import { createUiSlice } from '../stores/uiSlice';
 
-export interface AppState extends AuthSlice, TaskSlice, ProjectSlice, DocumentSlice, TeamSlice, EventSlice, MeetingSlice {
+export interface AppState extends AuthSlice, TaskSlice, ProjectSlice, DocumentSlice, TeamSlice, EventSlice, MeetingSlice, UiSlice {
   setupSubscriptions: () => void;
   teardownSubscriptions: () => void;
 }
@@ -36,6 +38,7 @@ export const useAppStore = create<AppState>()((...a) => {
     ...createTeamSlice(...a),
     ...createEventSlice(...a),
     ...createMeetingSlice(...a),
+    ...createUiSlice(...a),
     
     teardownSubscriptions: () => {
       unsubscribers.forEach(unsub => unsub());
