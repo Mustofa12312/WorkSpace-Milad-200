@@ -123,6 +123,12 @@ service cloud.firestore {
       allow delete: if inMyOrg(resource.data) && isManager();
     }
 
+    match /auditLogs/{id} {
+      allow read: if inMyOrg(resource.data) && isManager(); // Only managers can read audit logs
+      allow create: if inMyOrg(request.resource.data);
+      allow update, delete: if false; // Immutable
+    }
+
     // Everything else is denied by default (no catch-all match).
   }
 }

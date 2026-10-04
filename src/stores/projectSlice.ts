@@ -4,6 +4,7 @@ import type { AppState } from '../store/useAppStore';
 import { db } from '../lib/firebase';
 import { doc, setDoc, deleteDoc } from 'firebase/firestore';
 import toast from 'react-hot-toast';
+import { logAuditAction } from '../lib/audit';
 
 export interface ProjectSlice {
   projects: Project[];
@@ -15,10 +16,12 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
   projects: [],
   
   addProject: async (project) => {
-    const orgId = get().currentUser?.organizationId || get().currentOrgId;
+    const user = get().currentUser;
+    const orgId = user?.organizationId || get().currentOrgId;
     try { 
       await setDoc(doc(db, 'projects', project.id), { ...project, organizationId: orgId }); 
       toast.success('Proyek berhasil disimpan');
+      if (user) logAuditAction(orgId, user, 'CREATE', 'Project', project.id, `Created project "${project.name}"`);
     } catch (err) { const e = err as Error; 
       console.error('Firestore error:', e);
       toast.error(e.message || 'Gagal menyimpan proyek');
@@ -27,9 +30,12 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
   },
   
   deleteProject: async (projectId) => {
+    const user = get().currentUser;
+    const orgId = user?.organizationId || get().currentOrgId;
     try { 
       await deleteDoc(doc(db, 'projects', projectId)); 
       toast.success('Proyek dihapus');
+      if (user) logAuditAction(orgId, user, 'DELETE', 'Project', projectId, `Deleted project`);
     } catch (err) { const e = err as Error; 
       console.error('Firestore error:', e);
       toast.error(e.message || 'Gagal menghapus proyek');
