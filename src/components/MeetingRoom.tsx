@@ -368,6 +368,7 @@ function MeetingDetail({ meeting, onBack }: { meeting: Meeting; onBack: () => vo
   const { updateMeeting, addTask, projects } = useAppStore();
   const idCounterRef = useRef(0);
   const [recordingState, setRecordingState] = useState<RecordingState>('idle');
+  const isRecordingRef = useRef(false);
   const [time, setTime] = useState(0);
   const [activeTab, setActiveTab] = useState<ActiveTab>('transcript');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -452,6 +453,7 @@ function MeetingDetail({ meeting, onBack }: { meeting: Meeting; onBack: () => vo
       setMediaRecorder(recorder);
       recorder.start();
       setRecordingState('recording');
+      isRecordingRef.current = true;
       await updateMeeting(meeting.id, { status: 'ongoing' });
 
       // Start Realtime Transcription
@@ -498,18 +500,42 @@ function MeetingDetail({ meeting, onBack }: { meeting: Meeting; onBack: () => vo
         };
         
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        recognition.onerror = (e: any) => console.error('Speech recognition error', e);
-        recognition.start();
-        recognitionRef.current = recognition;
+        recognition.onerror = (e: any) => {
+          console.error('Speech recognition error', e.error);
+          if (e.error === 'not-allowed') {
+            toast.error('Izin mikrofon untuk transkripsi ditolak.');
+          }
+        };
+
+        // Auto restart if continuous listening stops due to silence
+        recognition.onend = () => {
+          if (isRecordingRef.current) {
+            try {
+              recognition.start();
+            } catch (err) {
+              console.error('Failed to restart recognition', err);
+            }
+          }
+        };
+
+        try {
+          recognition.start();
+          recognitionRef.current = recognition;
+        } catch (err) {
+          console.error('Failed to start recognition', err);
+        }
+      } else {
+        toast.error('Browser ini tidak mendukung transkripsi otomatis (Speech API). Gunakan Chrome/Edge.');
       }
 
     } catch (e) {
       console.error('Microphone access denied', e);
-      toast.error('Akses mikrofon diperlukan.');
+      toast.error('Akses mikrofon diperlukan untuk merekam dan transkripsi.');
     }
   };
 
   const stopRecording = () => {
+    isRecordingRef.current = false;
     if (mediaRecorder && mediaRecorder.state !== 'inactive') {
       mediaRecorder.stop();
       mediaRecorder.stream.getTracks().forEach(t => t.stop());
@@ -521,12 +547,14 @@ function MeetingDetail({ meeting, onBack }: { meeting: Meeting; onBack: () => vo
   };
 
   const pauseRecording = () => {
+    isRecordingRef.current = false;
     if (mediaRecorder?.state === 'recording') mediaRecorder.pause();
     if (recognitionRef.current) recognitionRef.current.stop();
     setRecordingState('paused');
   };
 
   const resumeRecording = () => {
+    isRecordingRef.current = true;
     if (mediaRecorder?.state === 'paused') mediaRecorder.resume();
     if (recognitionRef.current) recognitionRef.current.start();
     setRecordingState('recording');
@@ -542,12 +570,13 @@ function MeetingDetail({ meeting, onBack }: { meeting: Meeting; onBack: () => vo
     
     if (transcript.length > 0) {
       const allText = transcript.map(t => t.text).join(' ');
-      const words = allText.split(' ').filter(w => w.length > 4).slice(0, 5).join(', ');
+      const words = allText.split(' ').filter(w => w.length > 4);
+      const keywords = [...new Set(words)].slice(0, 5).join(', ');
       
-      dynamicSummary = `Rapat ini membahas beberapa poin penting yang ditangkap dari percakapan, di antaranya terkait dengan: ${words || 'berbagai topik internal'}. Seluruh peserta menyepakati langkah-langkah selanjutnya.`;
+      dynamicSummary = `Berdasarkan transkrip, rapat ini membahas topik utama seperti: ${keywords || 'pembahasan internal'}.`;
       
       dynamicDecisions = [
-        'Melanjutkan rencana sesuai pembahasan mengenai ' + (words.split(',')[0] || 'proyek saat ini') + '.',
+        'Melanjutkan rencana sesuai pembahasan mengenai ' + (words[0] || 'proyek saat ini') + '.',
         'Mengalokasikan sumber daya tambahan jika diperlukan pada kuartal ini.'
       ];
       
@@ -555,13 +584,13 @@ function MeetingDetail({ meeting, onBack }: { meeting: Meeting; onBack: () => vo
       const mainAssignee = assignees.length > 0 ? assignees[0] : 'Tim';
       
       dynamicActionItems = [
-        { id: `ai-${Date.now()}`, task: 'Menindaklanjuti hasil diskusi hari ini', assignee: mainAssignee, deadline: 'Jumat' },
-        { id: `ai-${Date.now() + 1}`, task: 'Membuat laporan progres mingguan', assignee: assignees[1] || 'Mustofa', deadline: 'Senin' },
+        { id: `ai-${Date.now()}`, task: 'Tindak lanjut hasil rapat (' + (words[0] || 'Topik Utama') + ')', assignee: mainAssignee, deadline: 'Besok' },
+        { id: `ai-${Date.now() + 1}`, task: 'Membuat laporan progres (' + (words[1] || 'Tugas') + ')', assignee: assignees.length > 1 ? assignees[1] : mainAssignee, deadline: 'Lusa' },
       ];
     } else {
-      dynamicSummary = 'Rapat membahas persiapan operasional. Keputusan telah diambil secara mufakat tanpa transkrip mendetail.';
-      dynamicDecisions = ['Melanjutkan operasional standar.', 'Monitoring minggu depan.'];
-      dynamicActionItems = [{ id: `ai-${Date.now()}`, task: 'Evaluasi mingguan', assignee: 'Mustofa', deadline: 'Jumat' }];
+      dynamicSummary = 'Rapat selesai direkam, namun transkrip kosong (mungkin tidak ada suara, izin mikrofon ditolak, atau browser tidak mendukung).';
+      dynamicDecisions = ['Tidak ada transkrip yang tercatat.'];
+      dynamicActionItems = [{ id: `ai-${Date.now()}`, task: 'Periksa pengaturan mikrofon untuk rapat berikutnya', assignee: 'Sistem', deadline: 'Besok' }];
     }
 
     setSummary(dynamicSummary);
