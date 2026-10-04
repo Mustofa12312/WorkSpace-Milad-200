@@ -51,7 +51,7 @@ export default function DecisionLog({ onNavigate }: { onNavigate: (tab: string) 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-              <Gavel className="text-indigo-600" /> Decision Log
+              <Gavel className="text-indigo-600" /> Log Keputusan
             </h2>
             <p className="text-sm text-slate-500 mt-1">
               Catatan pusat untuk semua keputusan dari setiap rapat.

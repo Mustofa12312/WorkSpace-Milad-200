@@ -91,15 +91,15 @@ export default function ProjectsView() {
         
         <div className="flex flex-col md:flex-row md:justify-between md:items-end mb-8 gap-4">
           <div>
-            <h2 className="text-2xl md:text-3xl font-bold text-slate-800 tracking-tight">Projects</h2>
-            <p className="text-slate-500 mt-1 text-sm md:text-base">Manage and track your organization's initiatives.</p>
+            <h2 className="text-2xl md:text-3xl font-bold text-slate-800 tracking-tight">Proyek</h2>
+            <p className="text-slate-500 mt-1 text-sm md:text-base">Kelola dan lacak inisiatif organisasi Anda.</p>
           </div>
           <button 
             onClick={() => setIsModalOpen(true)}
             className="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-xl md:rounded-full font-medium flex items-center justify-center gap-2 shadow-sm shadow-primary-500/30 transition-all hover:shadow-md hover:-translate-y-0.5 outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
           >
             <Plus size={18} />
-            New Project
+            Proyek Baru
           </button>
         </div>
 
@@ -109,7 +109,7 @@ export default function ProjectsView() {
             <Search size={16} className="text-slate-400" />
             <input 
               type="text" 
-              placeholder="Search projects..." 
+              placeholder="Cari proyek..." 
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               className="bg-transparent border-none outline-none ml-2 w-full text-sm placeholder-slate-400"
@@ -218,7 +218,7 @@ export default function ProjectsView() {
 
                   <div className="mt-auto pt-6">
                     <div className="flex justify-between text-xs font-bold text-slate-500 mb-2">
-                      <span>Progress</span>
+                      <span>Progres</span>
                       <span className="text-slate-700">{computedProgress}%</span>
                     </div>
                     <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">

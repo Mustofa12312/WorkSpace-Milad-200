@@ -54,21 +54,21 @@ describe('KanbanBoard', () => {
   it('renders tasks in their status columns', () => {
     render(<KanbanBoard />);
     expect(within(column(/Backlog/)).getByText('Book venue')).toBeInTheDocument();
-    expect(within(column(/In Progress/)).getByText('Write proposal')).toBeInTheDocument();
-    expect(within(column(/Completed/)).getByText('Belum ada tugas')).toBeInTheDocument();
+    expect(within(column(/Berjalan/)).getByText('Write proposal')).toBeInTheDocument();
+    expect(within(column(/Selesai/)).getByText('Belum ada tugas')).toBeInTheDocument();
   });
 
   it('creates a task via the modal with the chosen column status', async () => {
     const user = userEvent.setup();
     render(<KanbanBoard />);
 
-    await user.click(within(column(/Review/)).getByRole('button', { name: /Add Task/ }));
-    await user.type(screen.getByPlaceholderText('e.g., Design homepage mockup'), 'Print banners');
-    await user.click(screen.getByRole('button', { name: 'Create Task' }));
+    await user.click(within(column(/Evaluasi/)).getByRole('button', { name: /Tambah Tugas/ }));
+    await user.type(screen.getByPlaceholderText('misalnya, Desain mockup beranda'), 'Print banners');
+    await user.click(screen.getByRole('button', { name: 'Buat Tugas' }));
 
     expect(addTask).toHaveBeenCalledTimes(1);
     expect(addTask.mock.calls[0][0]).toMatchObject({ title: 'Print banners', status: 'review', priority: 'Medium' });
-    expect(screen.queryByText('Create New Task')).not.toBeInTheDocument();
+    expect(screen.queryByText('Buat Tugas Baru')).not.toBeInTheDocument();
   });
 
   it('filters tasks using the search bar', async () => {
@@ -78,7 +78,7 @@ describe('KanbanBoard', () => {
     expect(screen.getByText('Book venue')).toBeInTheDocument();
     expect(screen.getByText('Write proposal')).toBeInTheDocument();
 
-    await user.type(screen.getByPlaceholderText('Search tasks...'), 'Book');
+    await user.type(screen.getByPlaceholderText('Cari tugas...'), 'Book');
 
     expect(screen.getByText('Book venue')).toBeInTheDocument();
     expect(screen.queryByText('Write proposal')).not.toBeInTheDocument();

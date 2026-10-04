@@ -142,8 +142,8 @@ export default function TeamManagement() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:justify-between md:items-end mb-6 md:mb-8 gap-4">
           <div>
-            <h2 className="text-2xl md:text-3xl font-bold text-slate-800 tracking-tight">Team Management</h2>
-            <p className="text-slate-500 mt-1 text-sm md:text-base">Manage members, roles, and organization settings.</p>
+            <h2 className="text-2xl md:text-3xl font-bold text-slate-800 tracking-tight">Manajemen Tim</h2>
+            <p className="text-slate-500 mt-1 text-sm md:text-base">Kelola anggota, peran, dan pengaturan organisasi.</p>
           </div>
           {canInvite && (
             <button 
@@ -151,7 +151,7 @@ export default function TeamManagement() {
               className="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-xl md:rounded-full font-medium flex items-center justify-center gap-2 shadow-sm shadow-primary-500/30 transition-all hover:shadow-md hover:-translate-y-0.5"
             >
               <UserPlus size={18} />
-              Invite Member
+              Undang Anggota
             </button>
           )}
         </div>
@@ -162,7 +162,7 @@ export default function TeamManagement() {
             <Search size={16} className="text-slate-400" />
             <input 
               type="text" 
-              placeholder="Search by name or email..." 
+              placeholder="Cari berdasarkan nama atau email..." 
               className="bg-transparent border-none outline-none ml-2 w-full text-sm placeholder-slate-400"
             />
           </div>
@@ -255,11 +255,11 @@ export default function TeamManagement() {
           <table className="w-full text-left border-collapse hidden md:table">
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-semibold">
-                <th className="py-4 px-6">Member</th>
-                <th className="py-4 px-6">Role</th>
+                <th className="py-4 px-6">Anggota</th>
+                <th className="py-4 px-6">Peran</th>
                 <th className="py-4 px-6">Status</th>
-                <th className="py-4 px-6">Last Active</th>
-                <th className="py-4 px-6 text-right">Actions</th>
+                <th className="py-4 px-6">Terakhir Aktif</th>
+                <th className="py-4 px-6 text-right">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -341,15 +341,15 @@ export default function TeamManagement() {
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="p-6 border-b border-slate-100">
-              <h3 className="text-xl font-bold text-slate-800">Invite Team Member</h3>
+              <h3 className="text-xl font-bold text-slate-800">Undang Anggota Tim</h3>
             </div>
             <form onSubmit={handleInvite} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Alamat Email</label>
                 <input type="email" required value={newMember.email} onChange={e => setNewMember({...newMember, email: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none" placeholder="e.g., alex@company.com" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Role</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Peran</label>
                 <select value={newMember.role} onChange={e => setNewMember({...newMember, role: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none bg-white">
                   <option value="Member">Member</option>
                   <option value="Manager">Manager</option>
@@ -359,8 +359,8 @@ export default function TeamManagement() {
               </div>
               
               <div className="pt-4 flex gap-3 justify-end">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 text-slate-600 font-medium hover:bg-slate-100 rounded-xl transition-colors outline-none focus-visible:ring-2 focus-visible:ring-slate-400">Cancel</button>
-                <button type="submit" className="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-xl transition-colors shadow-sm shadow-primary-500/30 outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2">Send Invite</button>
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 text-slate-600 font-medium hover:bg-slate-100 rounded-xl transition-colors outline-none focus-visible:ring-2 focus-visible:ring-slate-400">Batal</button>
+                <button type="submit" className="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-xl transition-colors shadow-sm shadow-primary-500/30 outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2">Kirim Undangan</button>
               </div>
             </form>
           </div>

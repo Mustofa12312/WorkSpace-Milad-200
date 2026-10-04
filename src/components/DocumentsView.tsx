@@ -105,15 +105,15 @@ export default function DocumentsView() {
         {/* Header */}
         <div className="flex justify-between items-end mb-8">
           <div>
-            <h2 className="text-3xl font-bold text-slate-800 tracking-tight">Documents</h2>
-            <p className="text-slate-500 mt-1">Manage proposals, reports, and meeting minutes.</p>
+            <h2 className="text-3xl font-bold text-slate-800 tracking-tight">Dokumen</h2>
+            <p className="text-slate-500 mt-1">Kelola proposal, laporan, dan notulen rapat.</p>
           </div>
           <button 
             onClick={() => setIsModalOpen(true)}
             className="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-full font-medium flex items-center gap-2 shadow-sm shadow-primary-500/30 transition-all hover:shadow-md hover:-translate-y-0.5"
           >
             <Upload size={18} />
-            Upload File
+            Unggah File
           </button>
         </div>
 
@@ -123,7 +123,7 @@ export default function DocumentsView() {
             <Search size={16} className="text-slate-400" />
             <input 
               type="text" 
-              placeholder="Search documents..." 
+              placeholder="Cari dokumen..." 
               className="bg-transparent border-none outline-none ml-2 w-full text-sm placeholder-slate-400"
             />
           </div>
@@ -156,11 +156,11 @@ export default function DocumentsView() {
               <table className="w-full text-left border-collapse min-w-[600px]">
                 <thead>
                   <tr className="bg-slate-50/80 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-semibold">
-                    <th className="py-4 px-6">Name</th>
-                    <th className="py-4 px-6">Owner</th>
-                    <th className="py-4 px-6">Date Modified</th>
-                    <th className="py-4 px-6">Size</th>
-                    <th className="py-4 px-6 text-right">Actions</th>
+                    <th className="py-4 px-6">Nama</th>
+                    <th className="py-4 px-6">Pemilik</th>
+                    <th className="py-4 px-6">Tanggal Dimodifikasi</th>
+                    <th className="py-4 px-6">Ukuran</th>
+                    <th className="py-4 px-6 text-right">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -217,7 +217,7 @@ export default function DocumentsView() {
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-              <h3 className="text-xl font-bold text-slate-800">Upload Document</h3>
+              <h3 className="text-xl font-bold text-slate-800">Unggah Dokumen</h3>
               <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 rounded-lg p-1 transition-colors">
                 <X size={20} />
               </button>

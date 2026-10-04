@@ -7,7 +7,7 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const DAYS = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
 
 import { useAppStore, type Event } from '../store/useAppStore';
 
@@ -65,8 +65,8 @@ export default function CalendarView() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:justify-between md:items-end mb-6 md:mb-8 flex-shrink-0 gap-4">
           <div>
-            <h2 className="text-2xl md:text-3xl font-bold text-slate-800 tracking-tight">Calendar</h2>
-            <p className="text-slate-500 mt-1 text-sm md:text-base">Schedule meetings and track your deadlines.</p>
+            <h2 className="text-2xl md:text-3xl font-bold text-slate-800 tracking-tight">Kalender</h2>
+            <p className="text-slate-500 mt-1 text-sm md:text-base">Jadwalkan rapat dan pantau tenggat waktu Anda.</p>
           </div>
           <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
             <div className="flex items-center gap-3 mr-0 md:mr-4 text-slate-700 font-bold md:text-xl w-full md:w-auto justify-between md:justify-start bg-white md:bg-transparent p-2 md:p-0 rounded-xl border border-slate-200 md:border-none">
@@ -81,13 +81,13 @@ export default function CalendarView() {
                   onClick={() => setViewType('month')}
                   className={cn("px-4 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 transition-all", viewType === 'month' ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700")}
                 >
-                  <LayoutGrid size={16} /> <span className="hidden md:inline">Month</span>
+                  <LayoutGrid size={16} /> <span className="hidden md:inline">Bulan</span>
                 </button>
                 <button 
                   onClick={() => setViewType('week')}
                   className={cn("px-4 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 transition-all", viewType === 'week' ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700")}
                 >
-                  <List size={16} /> <span className="hidden md:inline">Week</span>
+                  <List size={16} /> <span className="hidden md:inline">Minggu</span>
                 </button>
               </div>
 
@@ -96,7 +96,7 @@ export default function CalendarView() {
                 className="flex-1 md:flex-none bg-primary-600 hover:bg-primary-700 text-white px-4 py-2.5 rounded-xl md:rounded-full font-medium flex items-center justify-center gap-2 shadow-sm shadow-primary-500/30 transition-all hover:shadow-md hover:-translate-y-0.5"
               >
                 <Plus size={18} />
-                <span className="hidden md:inline">New Event</span>
+                <span className="hidden md:inline">Acara Baru</span>
               </button>
             </div>
           </div>
@@ -190,33 +190,33 @@ export default function CalendarView() {
           <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
               <div className="p-6 border-b border-slate-100">
-                <h3 className="text-xl font-bold text-slate-800">Add New Event</h3>
+                <h3 className="text-xl font-bold text-slate-800">Tambah Acara Baru</h3>
               </div>
               <form onSubmit={handleNewEvent} className="p-6 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Event Title</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Judul Acara</label>
                   <input type="text" required value={newEvent.title} onChange={e => setNewEvent({...newEvent, title: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition-all" placeholder="e.g., Team Sync" />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Date</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Tanggal</label>
                     <input type="date" required value={newEvent.date} onChange={e => setNewEvent({...newEvent, date: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition-all" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Time</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Waktu</label>
                     <input type="text" required value={newEvent.time} onChange={e => setNewEvent({...newEvent, time: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition-all" placeholder="10:00 AM" />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Type</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Tipe</label>
                   <select value={newEvent.type} onChange={e => setNewEvent({...newEvent, type: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none bg-white transition-all">
-                    <option value="meeting">Meeting</option>
-                    <option value="task">Task Deadline</option>
+                    <option value="meeting">Rapat</option>
+                    <option value="task">Tenggat Tugas</option>
                   </select>
                 </div>
                 <div className="pt-4 flex gap-3 justify-end">
-                  <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 text-slate-600 font-medium hover:bg-slate-100 rounded-xl transition-colors outline-none focus-visible:ring-2 focus-visible:ring-slate-400">Cancel</button>
-                  <button type="submit" className="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-xl transition-colors shadow-sm shadow-primary-500/30 outline-none focus-visible:ring-2 focus-visible:ring-primary-500">Save Event</button>
+                  <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 text-slate-600 font-medium hover:bg-slate-100 rounded-xl transition-colors outline-none focus-visible:ring-2 focus-visible:ring-slate-400">Batal</button>
+                  <button type="submit" className="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-xl transition-colors shadow-sm shadow-primary-500/30 outline-none focus-visible:ring-2 focus-visible:ring-primary-500">Simpan Acara</button>
                 </div>
               </form>
             </div>

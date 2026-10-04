@@ -25,8 +25,8 @@ export default function Settings() {
         
         {/* Header */}
         <div className="mb-8">
-          <h2 className="text-3xl font-bold text-slate-800 tracking-tight">Organization Settings</h2>
-          <p className="text-slate-500 mt-1">Manage your workspace preferences, branding, and security.</p>
+          <h2 className="text-3xl font-bold text-slate-800 tracking-tight">Pengaturan Organisasi</h2>
+          <p className="text-slate-500 mt-1">Kelola preferensi ruang kerja, merek, dan keamanan Anda.</p>
         </div>
 
         <div className="flex flex-col md:flex-row gap-8">
@@ -39,35 +39,35 @@ export default function Settings() {
                 className={cn("w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors", activeTab === 'general' ? "bg-white border border-slate-200 text-primary-600 shadow-sm" : "text-slate-600 hover:bg-slate-100")}
               >
                 <Building size={18} />
-                General
+                Umum
               </button>
               <button 
                 onClick={() => setActiveTab('branding')}
                 className={cn("w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors", activeTab === 'branding' ? "bg-white border border-slate-200 text-primary-600 shadow-sm" : "text-slate-600 hover:bg-slate-100")}
               >
                 <Paintbrush size={18} />
-                Branding
+                Merek
               </button>
               <button 
                 onClick={() => setActiveTab('notifications')}
                 className={cn("w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors", activeTab === 'notifications' ? "bg-white border border-slate-200 text-primary-600 shadow-sm" : "text-slate-600 hover:bg-slate-100")}
               >
                 <Bell size={18} />
-                Notifications
+                Notifikasi
               </button>
               <button 
                 onClick={() => setActiveTab('security')}
                 className={cn("w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors", activeTab === 'security' ? "bg-white border border-slate-200 text-primary-600 shadow-sm" : "text-slate-600 hover:bg-slate-100")}
               >
                 <Shield size={18} />
-                Security & Roles
+                Keamanan & Peran
               </button>
               <button 
                 onClick={() => setActiveTab('advanced')}
                 className={cn("w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors", activeTab === 'advanced' ? "bg-white border border-slate-200 text-primary-600 shadow-sm" : "text-slate-600 hover:bg-slate-100")}
               >
                 <SettingsIcon size={18} />
-                Advanced
+                Lanjutan
               </button>
             </nav>
           </div>
@@ -77,11 +77,11 @@ export default function Settings() {
             
             {activeTab === 'general' && (
               <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-                <h3 className="text-lg font-bold text-slate-800 mb-6 border-b border-slate-100 pb-4">General Information</h3>
+                <h3 className="text-lg font-bold text-slate-800 mb-6 border-b border-slate-100 pb-4">Informasi Umum</h3>
                 
                 <div className="space-y-5">
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Workspace Name</label>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Nama Ruang Kerja</label>
                     <input 
                       type="text" 
                       value={tempName}
@@ -91,13 +91,13 @@ export default function Settings() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Workspace Description</label>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Deskripsi Ruang Kerja</label>
                     <textarea rows={3} defaultValue="Kepanitiaan Milad 200, mengurus segala persiapan acara." className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-semibold text-slate-700 mb-1.5">Timezone</label>
+                      <label className="block text-sm font-semibold text-slate-700 mb-1.5">Zona Waktu</label>
                       <div className="relative">
                         <Globe size={16} className="absolute left-3 top-3 text-slate-400" />
                         <select className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 appearance-none">
@@ -108,7 +108,7 @@ export default function Settings() {
                       </div>
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-slate-700 mb-1.5">Language</label>
+                      <label className="block text-sm font-semibold text-slate-700 mb-1.5">Bahasa</label>
                       <select className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
                         <option>English</option>
                         <option>Bahasa Indonesia</option>
@@ -119,7 +119,7 @@ export default function Settings() {
 
                 <div className="mt-8 flex justify-end">
                   <button onClick={handleSave} className="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow-sm shadow-primary-500/30 transition-all hover:-translate-y-0.5">
-                    <Save size={16} /> Save Changes
+                    <Save size={16} /> Simpan Perubahan
                   </button>
                 </div>
               </div>
@@ -127,26 +127,26 @@ export default function Settings() {
 
             {activeTab === 'branding' && (
               <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-                <h3 className="text-lg font-bold text-slate-800 mb-6 border-b border-slate-100 pb-4">Branding & Identity</h3>
+                <h3 className="text-lg font-bold text-slate-800 mb-6 border-b border-slate-100 pb-4">Merek & Identitas</h3>
                 
                 <div className="space-y-6">
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">Organization Logo</label>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Logo Organisasi</label>
                     <div className="flex items-center gap-6">
                       <div className="h-20 w-20 bg-gradient-to-br from-primary-500 to-indigo-600 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-md">
                         M
                       </div>
                       <div>
                         <button className="bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 px-4 py-2 rounded-xl text-sm font-medium transition-colors mb-2">
-                          Upload New Logo
+                          Unggah Logo Baru
                         </button>
-                        <p className="text-xs text-slate-500">Recommended size: 512x512px. PNG or JPG under 2MB.</p>
+                        <p className="text-xs text-slate-500">Rekomendasi ukuran: 512x512px. PNG atau JPG di bawah 2MB.</p>
                       </div>
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">Primary Color</label>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Warna Utama</label>
                     <div className="flex gap-3">
                       {['#0ea5e9', '#6366f1', '#a855f7', '#ec4899', '#10b981', '#f59e0b'].map((color, i) => (
                         <button key={i} className="h-8 w-8 rounded-full border-2 border-white shadow-sm ring-2 ring-transparent focus:ring-slate-300 hover:scale-110 transition-transform" style={{ backgroundColor: color }}></button>
@@ -160,7 +160,7 @@ export default function Settings() {
 
                 <div className="mt-8 flex justify-end">
                   <button className="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow-sm shadow-primary-500/30 transition-all hover:-translate-y-0.5">
-                    <Save size={16} /> Save Changes
+                    <Save size={16} /> Simpan Perubahan
                   </button>
                 </div>
               </div>
@@ -170,8 +170,8 @@ export default function Settings() {
             {(activeTab !== 'general' && activeTab !== 'branding') && (
               <div className="bg-white border border-slate-200 rounded-2xl p-12 shadow-sm flex flex-col items-center justify-center text-center">
                 <SettingsIcon size={48} className="text-slate-200 mb-4" />
-                <h3 className="text-lg font-bold text-slate-700 mb-1">Coming Soon</h3>
-                <p className="text-slate-500 text-sm">This settings pane is currently under construction for the MVP.</p>
+                <h3 className="text-lg font-bold text-slate-700 mb-1">Segera Hadir</h3>
+                <p className="text-slate-500 text-sm">Panel pengaturan ini sedang dalam tahap pengembangan untuk MVP.</p>
               </div>
             )}
 

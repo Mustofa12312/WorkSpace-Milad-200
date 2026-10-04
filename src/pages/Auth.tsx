@@ -115,7 +115,7 @@ export default function Auth() {
               disabled={isLoading}
               className="w-full bg-primary-600 hover:bg-primary-700 disabled:opacity-70 text-white font-semibold py-3 rounded-xl flex justify-center items-center gap-2 shadow-sm shadow-primary-500/30 transition-all hover:shadow-md hover:-translate-y-0.5 mt-2"
             >
-              {isLoading ? 'Processing...' : (isLogin ? 'Sign In' : 'Create Account')}
+              {isLoading ? 'Memproses...' : (isLogin ? 'Masuk' : 'Buat Akun')}
               {!isLoading && <ArrowRight size={18} />}
             </button>
           </form>

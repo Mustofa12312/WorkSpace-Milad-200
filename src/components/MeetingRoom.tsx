@@ -261,12 +261,12 @@ function MeetingList({ meetings, onSelect, onCreate }: {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
           <div>
-            <h2 className="text-2xl md:text-3xl font-bold text-slate-800 tracking-tight">Meetings</h2>
+            <h2 className="text-2xl md:text-3xl font-bold text-slate-800 tracking-tight">Rapat</h2>
             <p className="text-slate-500 mt-1 text-sm">Kelola rapat, transkrip, dan notulen organisasi Anda.</p>
           </div>
           <button onClick={onCreate}
             className="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-xl md:rounded-full font-medium flex items-center justify-center gap-2 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5 outline-none focus-visible:ring-2 focus-visible:ring-primary-500">
-            <Plus size={18} /> New Meeting
+            <Plus size={18} /> Rapat Baru
           </button>
         </div>
 

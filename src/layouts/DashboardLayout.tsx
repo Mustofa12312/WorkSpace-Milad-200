@@ -142,17 +142,17 @@ export default function DashboardLayout() {
 
         <nav className="flex-1 py-4 space-y-0.5 overflow-y-auto overflow-x-hidden px-2">
           <NavItem collapsed={isSidebarCollapsed} icon={<LayoutDashboard size={20} />} label="Dashboard" active={activeTab === 'dashboard'} onClick={() => { setActiveTab('dashboard'); setIsSidebarOpen(false); }} />
-          <NavItem collapsed={isSidebarCollapsed} icon={<FolderKanban size={20} />} label="Projects" active={activeTab === 'projects'} onClick={() => { setActiveTab('projects'); setIsSidebarOpen(false); }} />
-          <NavItem collapsed={isSidebarCollapsed} icon={<CheckSquare size={20} />} label="Tasks" active={activeTab === 'tasks'} onClick={() => { setActiveTab('tasks'); setIsSidebarOpen(false); }} />
-          <NavItem collapsed={isSidebarCollapsed} icon={<CalendarDays size={20} />} label="Meetings" active={activeTab === 'meetings'} onClick={() => { setActiveTab('meetings'); setIsSidebarOpen(false); }} badge={upcomingMeetingsCount > 0 ? upcomingMeetingsCount : undefined} />
-          <NavItem collapsed={isSidebarCollapsed} icon={<Gavel size={20} />} label="Decisions" active={activeTab === 'decisions'} onClick={() => { setActiveTab('decisions'); setIsSidebarOpen(false); }} />
-          <NavItem collapsed={isSidebarCollapsed} icon={<Calendar size={20} />} label="Calendar" active={activeTab === 'calendar'} onClick={() => { setActiveTab('calendar'); setIsSidebarOpen(false); }} />
-          <NavItem collapsed={isSidebarCollapsed} icon={<FileText size={20} />} label="Documents" active={activeTab === 'documents'} onClick={() => { setActiveTab('documents'); setIsSidebarOpen(false); }} />
-          <NavItem collapsed={isSidebarCollapsed} icon={<Users size={20} />} label="Team" active={activeTab === 'team'} onClick={() => { setActiveTab('team'); setIsSidebarOpen(false); }} />
+          <NavItem collapsed={isSidebarCollapsed} icon={<FolderKanban size={20} />} label="Proyek" active={activeTab === 'projects'} onClick={() => { setActiveTab('projects'); setIsSidebarOpen(false); }} />
+          <NavItem collapsed={isSidebarCollapsed} icon={<CheckSquare size={20} />} label="Tugas" active={activeTab === 'tasks'} onClick={() => { setActiveTab('tasks'); setIsSidebarOpen(false); }} />
+          <NavItem collapsed={isSidebarCollapsed} icon={<CalendarDays size={20} />} label="Rapat" active={activeTab === 'meetings'} onClick={() => { setActiveTab('meetings'); setIsSidebarOpen(false); }} badge={upcomingMeetingsCount > 0 ? upcomingMeetingsCount : undefined} />
+          <NavItem collapsed={isSidebarCollapsed} icon={<Gavel size={20} />} label="Keputusan" active={activeTab === 'decisions'} onClick={() => { setActiveTab('decisions'); setIsSidebarOpen(false); }} />
+          <NavItem collapsed={isSidebarCollapsed} icon={<Calendar size={20} />} label="Kalender" active={activeTab === 'calendar'} onClick={() => { setActiveTab('calendar'); setIsSidebarOpen(false); }} />
+          <NavItem collapsed={isSidebarCollapsed} icon={<FileText size={20} />} label="Dokumen" active={activeTab === 'documents'} onClick={() => { setActiveTab('documents'); setIsSidebarOpen(false); }} />
+          <NavItem collapsed={isSidebarCollapsed} icon={<Users size={20} />} label="Tim" active={activeTab === 'team'} onClick={() => { setActiveTab('team'); setIsSidebarOpen(false); }} />
         </nav>
 
         <div className="p-2 border-t border-slate-200 flex flex-col gap-1">
-          <NavItem collapsed={isSidebarCollapsed} icon={<Settings size={20} />} label="Settings" active={activeTab === 'settings'} onClick={() => { setActiveTab('settings'); setIsSidebarOpen(false); }} />
+          <NavItem collapsed={isSidebarCollapsed} icon={<Settings size={20} />} label="Pengaturan" active={activeTab === 'settings'} onClick={() => { setActiveTab('settings'); setIsSidebarOpen(false); }} />
           <button
             onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
             className="hidden md:flex items-center justify-center w-full p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors mt-1"
@@ -258,7 +258,7 @@ export default function DashboardLayout() {
               {/* Stats */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <StatCard
-                  title="Task Aktif"
+                  title="Tugas Aktif"
                   value={activeTasksCount}
                   icon={<CheckSquare size={20} className="text-primary-500" />}
                   color="primary"
@@ -292,7 +292,7 @@ export default function DashboardLayout() {
                 {/* Priority tasks */}
                 <div className="lg:col-span-2">
                   <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-bold text-slate-800">Task Prioritas</h3>
+                    <h3 className="text-lg font-bold text-slate-800">Tugas Prioritas</h3>
                     <button onClick={() => setActiveTab('tasks')} className="text-sm font-medium text-primary-600 hover:text-primary-700 flex items-center gap-1">
                       Lihat Semua <ArrowRight size={14} />
                     </button>
@@ -300,8 +300,8 @@ export default function DashboardLayout() {
                   {priorityTasks.length === 0 ? (
                     <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center">
                       <CheckSquare size={32} className="text-slate-200 mx-auto mb-3" />
-                      <p className="text-slate-500 text-sm">Belum ada task dengan prioritas tinggi.</p>
-                      <button onClick={() => setActiveTab('tasks')} className="mt-3 text-sm text-primary-600 hover:underline font-medium">+ Tambah Task</button>
+                      <p className="text-slate-500 text-sm">Belum ada tugas dengan prioritas tinggi.</p>
+                      <button onClick={() => setActiveTab('tasks')} className="mt-3 text-sm text-primary-600 hover:underline font-medium">+ Tambah Tugas</button>
                     </div>
                   ) : (
                     <div className="space-y-3">
@@ -373,7 +373,7 @@ export default function DashboardLayout() {
                     <h3 className="text-sm font-bold text-indigo-900 mb-3 flex items-center gap-2"><Sparkles size={14} /> Aksi Cepat</h3>
                     <div className="space-y-2">
                       {[
-                        { label: 'Buat Task Baru', tab: 'tasks', icon: <CheckSquare size={13} /> },
+                        { label: 'Buat Tugas Baru', tab: 'tasks', icon: <CheckSquare size={13} /> },
                         { label: 'Buat Rapat', tab: 'meetings', icon: <CalendarDays size={13} /> },
                         { label: 'Unggah Dokumen', tab: 'documents', icon: <FileText size={13} /> },
                       ].map(a => (

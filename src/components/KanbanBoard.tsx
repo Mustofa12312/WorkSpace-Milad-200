@@ -26,10 +26,10 @@ function cn(...inputs: ClassValue[]) {
 
 const COLUMNS: { id: TaskStatus; title: string; color: string }[] = [
   { id: 'backlog', title: '💡 Backlog', color: 'border-slate-200 bg-slate-50' },
-  { id: 'planned', title: '📌 Planned', color: 'border-blue-200 bg-blue-50' },
-  { id: 'in_progress', title: '🔵 In Progress', color: 'border-indigo-200 bg-indigo-50' },
-  { id: 'review', title: '🟡 Review', color: 'border-amber-200 bg-amber-50' },
-  { id: 'completed', title: '🟢 Completed', color: 'border-emerald-200 bg-emerald-50' },
+  { id: 'planned', title: '📌 Direncanakan', color: 'border-blue-200 bg-blue-50' },
+  { id: 'in_progress', title: '🔵 Berjalan', color: 'border-indigo-200 bg-indigo-50' },
+  { id: 'review', title: '🟡 Evaluasi', color: 'border-amber-200 bg-amber-50' },
+  { id: 'completed', title: '🟢 Selesai', color: 'border-emerald-200 bg-emerald-50' },
 ];
 
 export default function KanbanBoard() {
@@ -155,8 +155,8 @@ export default function KanbanBoard() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between md:items-end mb-6 flex-shrink-0 gap-4">
         <div>
-          <h2 className="text-2xl md:text-3xl font-bold text-slate-800 tracking-tight">Project Tasks</h2>
-          <p className="text-slate-500 mt-1 text-sm md:text-base">Manage your team's workflow and track progress.</p>
+          <h2 className="text-2xl md:text-3xl font-bold text-slate-800 tracking-tight">Tugas Proyek</h2>
+          <p className="text-slate-500 mt-1 text-sm md:text-base">Kelola alur kerja tim Anda dan lacak perkembangannya.</p>
         </div>
         <div className="flex flex-col md:flex-row gap-3 items-start md:items-center w-full md:w-auto">
           
@@ -164,7 +164,7 @@ export default function KanbanBoard() {
             <Search size={16} className="text-slate-400" />
             <input 
               type="text" 
-              placeholder="Search tasks..." 
+              placeholder="Cari tugas..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="bg-transparent border-none outline-none ml-2 w-full text-sm placeholder-slate-400"
@@ -177,7 +177,7 @@ export default function KanbanBoard() {
               className="flex-1 md:flex-none bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-xl font-medium flex items-center justify-center gap-2 shadow-sm shadow-primary-500/30 transition-all hover:-translate-y-0.5 outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
             >
               <Plus size={18} />
-              New Task
+              Tugas Baru
             </button>
           </div>
         </div>
@@ -221,11 +221,11 @@ export default function KanbanBoard() {
             aria-modal="true"
           >
             <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-              <h3 className="text-xl font-bold text-slate-800">Create New Task</h3>
+              <h3 className="text-xl font-bold text-slate-800">Buat Tugas Baru</h3>
             </div>
             <form onSubmit={handleSaveTask} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Task Title</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Judul Tugas</label>
                 <input 
                   autoFocus
                   type="text" 
@@ -233,27 +233,27 @@ export default function KanbanBoard() {
                   value={newTask.title} 
                   onChange={e => setNewTask({...newTask, title: e.target.value})} 
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:border-primary-500 focus:ring-primary-500/20 outline-none transition-all" 
-                  placeholder="e.g., Design homepage mockup" 
+                  placeholder="misalnya, Desain mockup beranda" 
                 />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Project</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Proyek</label>
                   <select 
                     required
                     value={newTask.projectId} 
                     onChange={e => setNewTask({...newTask, projectId: e.target.value})} 
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:border-primary-500 focus:ring-primary-500/20 outline-none bg-white transition-all"
                   >
-                    <option value="" disabled>Select a project</option>
+                    <option value="" disabled>Pilih proyek</option>
                     {projects.map(p => (
                       <option key={p.id} value={p.id}>{p.name}</option>
                     ))}
-                    {projects.length === 0 && <option value="general">General (No Projects)</option>}
+                    {projects.length === 0 && <option value="general">Umum (Tidak Ada Proyek)</option>}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Priority</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Prioritas</label>
                   <select value={newTask.priority} onChange={e => setNewTask({...newTask, priority: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:border-primary-500 focus:ring-primary-500/20 outline-none bg-white transition-all">
                     <option value="Low">Low</option>
                     <option value="Medium">Medium</option>
@@ -270,14 +270,14 @@ export default function KanbanBoard() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Due Date</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Tenggat Waktu</label>
                   <input type="date" value={newTask.dueDate} onChange={e => setNewTask({...newTask, dueDate: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:border-primary-500 focus:ring-primary-500/20 outline-none transition-all" />
                 </div>
               </div>
               
               <div className="pt-4 flex gap-3 justify-end">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 text-slate-600 font-medium hover:bg-slate-100 rounded-xl transition-colors outline-none focus-visible:ring-2 focus-visible:ring-slate-400">Cancel</button>
-                <button type="submit" className="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-xl transition-colors shadow-sm shadow-primary-500/30 outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2">Create Task</button>
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 text-slate-600 font-medium hover:bg-slate-100 rounded-xl transition-colors outline-none focus-visible:ring-2 focus-visible:ring-slate-400">Batal</button>
+                <button type="submit" className="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-xl transition-colors shadow-sm shadow-primary-500/30 outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2">Buat Tugas</button>
               </div>
             </form>
           </div>
@@ -322,7 +322,7 @@ export default function KanbanBoard() {
                           : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
                       }`}
                     >
-                      {s === 'backlog' ? '💡 Backlog' : s === 'planned' ? '📌 Planned' : s === 'in_progress' ? '🔵 In Progress' : s === 'review' ? '🟡 Review' : '🟢 Done'}
+                      {s === 'backlog' ? '💡 Backlog' : s === 'planned' ? '📌 Direncanakan' : s === 'in_progress' ? '🔵 Berjalan' : s === 'review' ? '🟡 Evaluasi' : '🟢 Selesai'}
                     </button>
                   ))}
                 </div>
@@ -331,7 +331,7 @@ export default function KanbanBoard() {
               {/* Info */}
               {detailTask.dueDate && detailTask.dueDate !== 'No date' && (
                 <div>
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 block">Due Date</label>
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 block">Tenggat Waktu</label>
                   <div className="flex items-center gap-2 text-sm text-slate-700">
                     <Calendar size={15} className="text-slate-400" />
                     {detailTask.dueDate}
@@ -340,7 +340,7 @@ export default function KanbanBoard() {
               )}
 
               <div>
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 block">Assignee</label>
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 block">Pekerja</label>
                 <div className="flex items-center gap-2">
                   <div className="h-8 w-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full text-white flex items-center justify-center font-bold text-xs shadow-sm">
                     {detailTask.assignee}
@@ -425,7 +425,7 @@ function DroppableColumn({ column, tasks, onQuickAdd, onOpenDetail }: {
           className="w-full py-2.5 rounded-xl border border-dashed border-slate-300 text-slate-500 text-sm font-medium hover:border-primary-400 hover:text-primary-600 hover:bg-primary-50 transition-colors flex items-center justify-center gap-1.5 outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
         >
           <Plus size={16} />
-          Add Task
+          Tambah Tugas
         </button>
       </div>
     </div>
@@ -577,7 +577,7 @@ function TaskCard({
                   <p className="px-4 py-1 text-[10px] text-slate-400 uppercase font-bold tracking-wider">Pindah ke</p>
                   {(['backlog', 'planned', 'in_progress', 'review', 'completed'] as TaskStatus[]).filter(s => s !== task.status).map(s => (
                     <button key={s} onClick={(e) => handleMenuAction(e, s)} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
-                      {s === 'backlog' ? '💡 Backlog' : s === 'planned' ? '📌 Planned' : s === 'in_progress' ? '🔵 In Progress' : s === 'review' ? '🟡 Review' : '🟢 Completed'}
+                      {s === 'backlog' ? '💡 Backlog' : s === 'planned' ? '📌 Direncanakan' : s === 'in_progress' ? '🔵 Berjalan' : s === 'review' ? '🟡 Evaluasi' : '🟢 Selesai'}
                     </button>
                   ))}
                   <hr className="my-1 border-slate-100" />
