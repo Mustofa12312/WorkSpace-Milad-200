@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAppStore, type Task, type TaskStatus, type Priority } from '../store/useAppStore';
-import { Plus, MoreHorizontal, Calendar, MessageSquare, Paperclip, AlertCircle, Search, X, Trash2, CheckCircle2 } from 'lucide-react';
+import { Plus, MoreHorizontal, Calendar, MessageSquare, Paperclip, AlertCircle, Search, X, Trash2, CheckCircle2, GripVertical } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -420,7 +420,7 @@ function DroppableColumn({ column, tasks, onQuickAdd, onOpenDetail }: {
 
 // --- DND Kit Task Component ---
 function DraggableTask({ task, onOpenDetail }: { task: Task; onOpenDetail: (t: Task) => void }) {
-  const { setNodeRef, transform, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: task.id,
     data: { type: 'Task', task }
   });
@@ -438,7 +438,16 @@ function DraggableTask({ task, onOpenDetail }: { task: Task; onOpenDetail: (t: T
   }
 
   return (
-    <div ref={setNodeRef} style={style} className="outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded-xl touch-manipulation">
+    <div ref={setNodeRef} style={style} className="relative outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded-xl touch-manipulation group">
+      {/* Drag handle zone at the top of the card — only this area triggers DnD */}
+      <div
+        {...listeners}
+        {...attributes}
+        className="absolute top-0 left-0 right-0 h-8 cursor-grab active:cursor-grabbing rounded-t-xl z-10 flex items-center px-4 opacity-0 hover:opacity-100 transition-opacity group-has-[:hover]:opacity-100"
+        title="Geser untuk memindahkan"
+      >
+        <GripVertical size={14} className="text-slate-400" />
+      </div>
       <TaskCard task={task} onOpenDetail={onOpenDetail} />
     </div>
   );
