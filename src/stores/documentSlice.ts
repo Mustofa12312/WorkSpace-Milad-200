@@ -8,7 +8,7 @@ import { logAuditAction } from '../lib/audit';
 
 export interface DocumentSlice {
   documents: Document[];
-  addDocument: (doc: Document) => void;
+  addDocument: (doc: Document) => Promise<void>;
   deleteDocument: (docId: string) => void;
 }
 

@@ -59,13 +59,14 @@ export default function DocumentsView() {
     const uploadToast = toast.loading('Mengunggah dokumen...');
 
     try {
-      const storageRef = ref(storage, `orgs/${currentOrgId}/documents/${Date.now()}_${selectedFile.name}`);
+      const orgId = currentUser?.organizationId || currentOrgId;
+      const storageRef = ref(storage, `orgs/${orgId}/documents/${Date.now()}_${selectedFile.name}`);
       await uploadBytes(storageRef, selectedFile, { contentType: selectedFile.type || undefined });
       const downloadUrl = await getDownloadURL(storageRef);
       
       const fileSizeKB = Math.round(selectedFile.size / 1024);
       
-      addDocument({
+      await addDocument({
         id: `doc-${Date.now()}`,
         name: newDocName,
         type,

@@ -429,7 +429,7 @@ function MeetingDetail({ meeting, onBack }: { meeting: Meeting; onBack: () => vo
         const actualMimeType = recorder.mimeType || 'audio/webm';
         const safeType = actualMimeType.startsWith('audio/') ? actualMimeType : 'audio/webm';
         const blob = new Blob(chunks, { type: safeType });
-        const orgId = useAppStore.getState().currentOrgId;
+        const orgId = useAppStore.getState().currentUser?.organizationId || useAppStore.getState().currentOrgId;
         try {
           const storageRef = ref(storage, `orgs/${orgId}/recordings/meeting_${meeting.id}.webm`);
           await uploadBytes(storageRef, blob, { contentType: blob.type });
