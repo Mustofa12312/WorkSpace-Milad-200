@@ -67,8 +67,11 @@ export interface Document {
 export interface Event {
   id: string;
   title: string;
-  date: number;
+  date: number | string;
   time: string;
+  type?: string;
+  personInCharge?: string;
+  location?: string;
   color: string;
   organizationId?: string;
 }

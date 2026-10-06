@@ -9,6 +9,8 @@ import { logAuditAction } from '../lib/audit';
 export interface EventSlice {
   events: Event[];
   addEvent: (event: Event) => void;
+  updateEvent: (id: string, updates: Partial<Event>) => void;
+  deleteEvent: (id: string) => void;
 }
 
 export const createEventSlice: StateCreator<AppState, [], [], EventSlice> = (_set, get) => ({
@@ -24,6 +26,35 @@ export const createEventSlice: StateCreator<AppState, [], [], EventSlice> = (_se
     } catch (err) { const e = err as Error; 
       console.error('Firestore error:', e);
       toast.error(e.message || 'Gagal menyimpan acara');
+      throw e;
+    }
+  },
+  
+  updateEvent: async (id, updates) => {
+    const user = get().currentUser;
+    const orgId = user?.organizationId || get().currentOrgId;
+    try {
+      await setDoc(doc(db, 'events', id), { ...updates, organizationId: orgId }, { merge: true });
+      toast.success('Acara berhasil diperbarui');
+      if (user) logAuditAction(orgId, user, 'UPDATE', 'Event', id, `Updated event`);
+    } catch (err) { const e = err as Error;
+      console.error('Firestore error:', e);
+      toast.error(e.message || 'Gagal memperbarui acara');
+      throw e;
+    }
+  },
+  
+  deleteEvent: async (id) => {
+    const user = get().currentUser;
+    const orgId = user?.organizationId || get().currentOrgId;
+    try {
+      const { deleteDoc } = await import('firebase/firestore');
+      await deleteDoc(doc(db, 'events', id));
+      toast.success('Acara berhasil dihapus');
+      if (user) logAuditAction(orgId, user, 'DELETE', 'Event', id, `Deleted event`);
+    } catch (err) { const e = err as Error;
+      console.error('Firestore error:', e);
+      toast.error(e.message || 'Gagal menghapus acara');
       throw e;
     }
   },
