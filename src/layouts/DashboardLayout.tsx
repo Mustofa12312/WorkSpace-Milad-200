@@ -18,6 +18,7 @@ import CalendarView from '../components/CalendarView';
 import DocumentsView from '../components/DocumentsView';
 import CommandPalette from '../components/CommandPalette';
 import DecisionLog from '../components/DecisionLog';
+import AgendaView from '../components/AgendaView';
 import {
   LayoutDashboard,
   CalendarDays,
@@ -40,6 +41,7 @@ import {
   ArrowRight,
   Sparkles,
   Gavel,
+  ListTodo,
 } from 'lucide-react';
 
 export default function DashboardLayout() {
@@ -48,7 +50,7 @@ export default function DashboardLayout() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isCmdOpen, setIsCmdOpen] = useState(false);
-  const { tasks, meetings, projects, setupSubscriptions, currentUser, setCurrentUser, team, orgName } = useAppStore();
+  const { tasks, meetings, projects, setupSubscriptions, currentUser, setCurrentUser, team, orgName, events } = useAppStore();
   const navigate = useNavigate();
 
   // Ctrl+K / Cmd+K shortcut
@@ -146,7 +148,8 @@ export default function DashboardLayout() {
           <NavItem collapsed={isSidebarCollapsed} icon={<CheckSquare size={20} />} label="Tugas" active={activeTab === 'tasks'} onClick={() => { setActiveTab('tasks'); setIsSidebarOpen(false); }} />
           <NavItem collapsed={isSidebarCollapsed} icon={<CalendarDays size={20} />} label="Rapat" active={activeTab === 'meetings'} onClick={() => { setActiveTab('meetings'); setIsSidebarOpen(false); }} badge={upcomingMeetingsCount > 0 ? upcomingMeetingsCount : undefined} />
           <NavItem collapsed={isSidebarCollapsed} icon={<Gavel size={20} />} label="Keputusan" active={activeTab === 'decisions'} onClick={() => { setActiveTab('decisions'); setIsSidebarOpen(false); }} />
-          <NavItem collapsed={isSidebarCollapsed} icon={<Calendar size={20} />} label="Kalender" active={activeTab === 'calendar'} onClick={() => { setActiveTab('calendar'); setIsSidebarOpen(false); }} />
+          <NavItem collapsed={isSidebarCollapsed} icon={<Calendar size={20} />} label="Kalender" active={activeTab === 'calendar'} onClick={() => { setActiveTab('calendar'); setIsSidebarOpen(false); }} badge={events.length > 0 ? events.length : undefined} />
+          <NavItem collapsed={isSidebarCollapsed} icon={<ListTodo size={20} />} label="Agenda" active={activeTab === 'agenda'} onClick={() => { setActiveTab('agenda'); setIsSidebarOpen(false); }} />
           <NavItem collapsed={isSidebarCollapsed} icon={<FileText size={20} />} label="Dokumen" active={activeTab === 'documents'} onClick={() => { setActiveTab('documents'); setIsSidebarOpen(false); }} />
           <NavItem collapsed={isSidebarCollapsed} icon={<Users size={20} />} label="Tim" active={activeTab === 'team'} onClick={() => { setActiveTab('team'); setIsSidebarOpen(false); }} />
         </nav>
@@ -415,6 +418,7 @@ export default function DashboardLayout() {
         {activeTab === 'projects' && <ProjectsView />}
         {activeTab === 'decisions' && <DecisionLog onNavigate={setActiveTab} />}
         {activeTab === 'calendar' && <CalendarView />}
+        {activeTab === 'agenda' && <AgendaView />}
         {activeTab === 'documents' && <DocumentsView />}
         {activeTab === 'settings' && <SettingsComponent />}
       </main>
