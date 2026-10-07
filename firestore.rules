@@ -102,35 +102,35 @@ service cloud.firestore {
       allow read: if inMyOrg(resource.data);
       allow create: if inMyOrg(request.resource.data) && canEdit();
       allow update: if inMyOrg(resource.data) && orgUnchanged() && canEdit();
-      allow delete: if inMyOrg(resource.data) && isManager();
+      allow delete: if inMyOrg(resource.data) && canEdit();
     }
 
     match /projects/{id} {
       allow read: if inMyOrg(resource.data);
       allow create: if inMyOrg(request.resource.data) && canEdit();
       allow update: if inMyOrg(resource.data) && orgUnchanged() && canEdit();
-      allow delete: if inMyOrg(resource.data) && isManager();
+      allow delete: if inMyOrg(resource.data) && canEdit();
     }
 
     match /documents/{id} {
       allow read: if inMyOrg(resource.data);
       allow create: if inMyOrg(request.resource.data) && canEdit();
       allow update: if inMyOrg(resource.data) && orgUnchanged() && canEdit();
-      allow delete: if inMyOrg(resource.data) && isManager();
+      allow delete: if inMyOrg(resource.data) && canEdit();
     }
 
     match /events/{id} {
       allow read: if inMyOrg(resource.data);
       allow create: if inMyOrg(request.resource.data) && canEdit();
       allow update: if inMyOrg(resource.data) && orgUnchanged() && canEdit();
-      allow delete: if inMyOrg(resource.data) && isManager();
+      allow delete: if inMyOrg(resource.data) && canEdit();
     }
 
     match /meetings/{id} {
       allow read: if inMyOrg(resource.data);
       allow create: if inMyOrg(request.resource.data) && canEdit();
       allow update: if inMyOrg(resource.data) && orgUnchanged() && canEdit();
-      allow delete: if inMyOrg(resource.data) && isManager();
+      allow delete: if inMyOrg(resource.data) && canEdit();
     }
 
     match /invitations/{id} {

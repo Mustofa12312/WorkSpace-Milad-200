@@ -2,7 +2,7 @@ import type { StateCreator } from 'zustand';
 import type { Event } from '../types';
 import type { AppState } from '../store/useAppStore';
 import { db } from '../lib/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import { logAuditAction } from '../lib/audit';
 
@@ -48,7 +48,6 @@ export const createEventSlice: StateCreator<AppState, [], [], EventSlice> = (_se
     const user = get().currentUser;
     const orgId = user?.organizationId || get().currentOrgId;
     try {
-      const { deleteDoc } = await import('firebase/firestore');
       await deleteDoc(doc(db, 'events', id));
       toast.success('Acara berhasil dihapus');
       if (user) logAuditAction(orgId, user, 'DELETE', 'Event', id, `Deleted event`);
