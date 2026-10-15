@@ -2,13 +2,14 @@ import type { StateCreator } from 'zustand';
 import type { Project } from '../types';
 import type { AppState } from '../store/useAppStore';
 import { db } from '../lib/firebase';
-import { doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import { logAuditAction } from '../lib/audit';
 
 export interface ProjectSlice {
   projects: Project[];
   addProject: (project: Project) => void;
+  updateProject: (projectId: string, updates: Partial<Project>) => void;
   deleteProject: (projectId: string) => void;
 }
 
@@ -25,6 +26,20 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
     } catch (err) { const e = err as Error; 
       console.error('Firestore error:', e);
       toast.error(e.message || 'Gagal menyimpan proyek');
+      throw e;
+    }
+  },
+
+  updateProject: async (projectId, updates) => {
+    const user = get().currentUser;
+    const orgId = user?.organizationId || get().currentOrgId;
+    try { 
+      await updateDoc(doc(db, 'projects', projectId), updates as Record<string, unknown>); 
+      toast.success('Proyek diperbarui');
+      if (user) logAuditAction(orgId, user, 'UPDATE', 'Project', projectId, `Updated project details`);
+    } catch (err) { const e = err as Error; 
+      console.error('Firestore error:', e);
+      toast.error(e.message || 'Gagal memperbarui proyek');
       throw e;
     }
   },

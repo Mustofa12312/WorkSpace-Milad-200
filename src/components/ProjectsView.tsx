@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Plus, Filter, MoreHorizontal, FolderKanban, Users, Clock, X, CheckCircle2, Trash2, ChevronRight, AlertCircle } from 'lucide-react';
+import { Search, Plus, MoreHorizontal, FolderKanban, Users, Clock, X, CheckCircle2, Trash2, ChevronRight, AlertCircle } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -10,7 +10,7 @@ function cn(...inputs: ClassValue[]) {
 import { useAppStore, type Project } from '../store/useAppStore';
 
 export default function ProjectsView() {
-  const { projects, tasks, addProject, deleteProject, searchFocus, setSearchFocus } = useAppStore();
+  const { projects, tasks, addProject, updateProject, deleteProject, searchFocus, setSearchFocus } = useAppStore();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newProject, setNewProject] = useState({ name: '', status: 'Planning', dueDate: '', description: '' });
@@ -18,6 +18,7 @@ export default function ProjectsView() {
   const [detailProject, setDetailProject] = useState<Project | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
 
   // Handle global search focus
   useEffect(() => {
@@ -73,10 +74,12 @@ export default function ProjectsView() {
     if (detailProject?.id === projectId) setDetailProject(null);
   };
 
-  const filteredProjects = projects.filter(p =>
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (p.description || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredProjects = projects.filter(p => {
+    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (p.description || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'All' || p.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   const statusColor = (status: string) => {
     if (status === 'Active') return 'bg-emerald-50 text-emerald-600 border-emerald-200';
@@ -116,10 +119,17 @@ export default function ProjectsView() {
             />
           </div>
           <div className="flex gap-3">
-            <button className="bg-white border border-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-50 transition-colors flex items-center gap-2 shadow-sm">
-              <Filter size={16} />
-              Filter
-            </button>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="bg-white border border-slate-200 text-slate-700 px-3.5 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-50 transition-colors shadow-sm outline-none focus:ring-2 focus:ring-primary-500/20"
+            >
+              <option value="All">Semua Status</option>
+              <option value="Planning">Planning</option>
+              <option value="Active">Active</option>
+              <option value="Completed">Completed</option>
+              <option value="On Hold">On Hold</option>
+            </select>
           </div>
         </div>
 
@@ -272,16 +282,31 @@ export default function ProjectsView() {
 
               {/* Stats */}
               <div className="grid grid-cols-3 divide-x divide-slate-100 border-b border-slate-100">
-                {[
-                  { label: 'Status', value: detailProject.status },
-                  { label: 'Anggota', value: `${detailProject.members} orang` },
-                  { label: 'Tenggat', value: detailProject.dueDate },
-                ].map(({ label, value }) => (
-                  <div key={label} className="p-4 text-center">
-                    <div className="text-xs text-slate-500 font-medium mb-1">{label}</div>
-                    <div className="text-sm font-bold text-slate-800">{value}</div>
-                  </div>
-                ))}
+                <div className="p-4 text-center">
+                  <div className="text-xs text-slate-500 font-medium mb-1">Status</div>
+                  <select
+                    value={detailProject.status}
+                    onChange={async (e) => {
+                      const newStatus = e.target.value;
+                      await updateProject(detailProject.id, { status: newStatus });
+                      setDetailProject({ ...detailProject, status: newStatus });
+                    }}
+                    className="text-xs font-bold border border-slate-200 rounded-lg px-2 py-1 bg-white text-slate-800 outline-none cursor-pointer hover:border-primary-400"
+                  >
+                    <option value="Planning">Planning</option>
+                    <option value="Active">Active</option>
+                    <option value="Completed">Completed</option>
+                    <option value="On Hold">On Hold</option>
+                  </select>
+                </div>
+                <div className="p-4 text-center">
+                  <div className="text-xs text-slate-500 font-medium mb-1">Anggota</div>
+                  <div className="text-sm font-bold text-slate-800">{detailProject.members} orang</div>
+                </div>
+                <div className="p-4 text-center">
+                  <div className="text-xs text-slate-500 font-medium mb-1">Tenggat</div>
+                  <div className="text-sm font-bold text-slate-800">{detailProject.dueDate}</div>
+                </div>
               </div>
 
               {/* Progress */}

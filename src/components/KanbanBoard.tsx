@@ -33,19 +33,21 @@ const COLUMNS: { id: TaskStatus; title: string; color: string }[] = [
 ];
 
 export default function KanbanBoard() {
-  const { tasks, updateTaskStatus, addTask, projects, searchFocus, setSearchFocus } = useAppStore();
+  const { tasks, updateTaskStatus, addTask, deleteTask, projects, team, currentUser, searchFocus, setSearchFocus } = useAppStore();
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [detailTask, setDetailTask] = useState<Task | null>(null);
   const [newTask, setNewTask] = useState({ 
     title: '', 
     projectId: '', // use empty string initially to prompt selection
-    priority: 'Medium', 
+    priority: 'Medium' as Priority, 
     status: 'backlog' as TaskStatus, 
-    dueDate: '' 
+    dueDate: '',
+    assignee: ''
   });
   
   const [searchTerm, setSearchTerm] = useState('');
+  const [priorityFilter, setPriorityFilter] = useState('All');
 
   // Handle global search focus
   useEffect(() => {
@@ -72,7 +74,14 @@ export default function KanbanBoard() {
   }, [isModalOpen]);
 
   const handleQuickAdd = (status: TaskStatus = 'backlog') => {
-    setNewTask({ title: '', projectId: projects.length > 0 ? projects[0].id : '', priority: 'Medium', status, dueDate: '' });
+    setNewTask({ 
+      title: '', 
+      projectId: projects.length > 0 ? projects[0].id : '', 
+      priority: 'Medium', 
+      status, 
+      dueDate: '',
+      assignee: currentUser?.name || (team.length > 0 ? team[0].name : 'M')
+    });
     setIsModalOpen(true);
   };
 
@@ -98,11 +107,11 @@ export default function KanbanBoard() {
       dueDate: formattedDate,
       comments: 0,
       attachments: 0,
-      assignee: 'M'
+      assignee: newTask.assignee || currentUser?.name || 'M'
     });
     
     setIsModalOpen(false);
-    setNewTask({ title: '', projectId: '', priority: 'Medium', status: 'backlog', dueDate: '' });
+    setNewTask({ title: '', projectId: '', priority: 'Medium', status: 'backlog', dueDate: '', assignee: '' });
   };
   
   // --- DND Kit Setup ---
@@ -143,11 +152,14 @@ export default function KanbanBoard() {
     }
   };
 
-  // Filter tasks based on search
-  const filteredTasks = tasks.filter(t => 
-    t.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    t.project.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filter tasks based on search and priority
+  const filteredTasks = tasks.filter(t => {
+    const matchesSearch = t.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          t.project.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (t.assignee && t.assignee.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesPriority = priorityFilter === 'All' || t.priority === priorityFilter;
+    return matchesSearch && matchesPriority;
+  });
 
   return (
     <div className="h-full flex flex-col p-4 md:p-8 overflow-hidden bg-slate-50/50">
@@ -160,7 +172,7 @@ export default function KanbanBoard() {
         </div>
         <div className="flex flex-col md:flex-row gap-3 items-start md:items-center w-full md:w-auto">
           
-          <div className="flex items-center bg-white rounded-xl px-4 py-2 w-full md:w-64 border border-slate-200 focus-within:ring-2 focus-within:ring-primary-500/20 shadow-sm transition-shadow">
+          <div className="flex items-center bg-white rounded-xl px-4 py-2 w-full md:w-60 border border-slate-200 focus-within:ring-2 focus-within:ring-primary-500/20 shadow-sm transition-shadow">
             <Search size={16} className="text-slate-400" />
             <input 
               type="text" 
@@ -169,6 +181,20 @@ export default function KanbanBoard() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="bg-transparent border-none outline-none ml-2 w-full text-sm placeholder-slate-400"
             />
+          </div>
+
+          <div className="flex items-center bg-white rounded-xl px-3 py-2 border border-slate-200 shadow-sm">
+            <select
+              value={priorityFilter}
+              onChange={(e) => setPriorityFilter(e.target.value)}
+              className="bg-transparent border-none outline-none text-sm text-slate-700 font-medium cursor-pointer"
+            >
+              <option value="All">Semua Prioritas</option>
+              <option value="Urgent">🔴 Urgent</option>
+              <option value="High">🟠 High</option>
+              <option value="Medium">🔵 Medium</option>
+              <option value="Low">⚪ Low</option>
+            </select>
           </div>
 
           <div className="flex gap-3 w-full md:w-auto">
@@ -254,7 +280,7 @@ export default function KanbanBoard() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Prioritas</label>
-                  <select value={newTask.priority} onChange={e => setNewTask({...newTask, priority: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:border-primary-500 focus:ring-primary-500/20 outline-none bg-white transition-all">
+                  <select value={newTask.priority} onChange={e => setNewTask({...newTask, priority: e.target.value as Priority})} className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:border-primary-500 focus:ring-primary-500/20 outline-none bg-white transition-all">
                     <option value="Low">Low</option>
                     <option value="Medium">Medium</option>
                     <option value="High">High</option>
@@ -272,6 +298,20 @@ export default function KanbanBoard() {
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Tenggat Waktu</label>
                   <input type="date" value={newTask.dueDate} onChange={e => setNewTask({...newTask, dueDate: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:border-primary-500 focus:ring-primary-500/20 outline-none transition-all" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Penanggung Jawab</label>
+                  <select
+                    value={newTask.assignee}
+                    onChange={e => setNewTask({...newTask, assignee: e.target.value})}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:border-primary-500 focus:ring-primary-500/20 outline-none bg-white transition-all"
+                  >
+                    {currentUser && <option value={currentUser.name}>{currentUser.name} (Saya)</option>}
+                    {team.filter(m => m.name !== currentUser?.name).map(m => (
+                      <option key={m.id} value={m.name}>{m.name}</option>
+                    ))}
+                    {!currentUser && team.length === 0 && <option value="M">Anggota Tim</option>}
+                  </select>
                 </div>
               </div>
               
@@ -353,7 +393,23 @@ export default function KanbanBoard() {
             {/* Detail Actions */}
             <div className="p-6 border-t border-slate-100 flex gap-3">
               <button
-                onClick={() => { updateTaskStatus(detailTask.id, detailTask.status === 'completed' ? 'in_progress' : 'completed'); setDetailTask({...detailTask, status: detailTask.status === 'completed' ? 'in_progress' : 'completed'}); }}
+                type="button"
+                onClick={async () => {
+                  await deleteTask(detailTask.id);
+                  setDetailTask(null);
+                }}
+                className="py-2.5 px-4 rounded-xl font-medium text-sm text-red-600 bg-red-50 hover:bg-red-100 transition-colors flex items-center gap-1.5"
+                title="Hapus Tugas"
+              >
+                <Trash2 size={16} />
+                Hapus
+              </button>
+              <button
+                onClick={() => { 
+                  const nextStatus: TaskStatus = detailTask.status === 'completed' ? 'in_progress' : 'completed';
+                  updateTaskStatus(detailTask.id, nextStatus); 
+                  setDetailTask({...detailTask, status: nextStatus}); 
+                }}
                 className={`flex-1 py-2.5 rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition-all ${
                   detailTask.status === 'completed'
                     ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
