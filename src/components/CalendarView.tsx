@@ -53,10 +53,15 @@ export default function CalendarView() {
     setModalMode('edit');
   };
 
+  const parseEventDate = (dateVal: string | number) => {
+    if (typeof dateVal === 'number') {
+      return new Date(currentDate.getFullYear(), currentDate.getMonth(), dateVal);
+    }
+    return new Date(dateVal.includes('T') ? dateVal : `${dateVal}T00:00:00`);
+  };
+
   const getFormattedEventDate = (dateVal: string | number) => {
-    const dateObj = typeof dateVal === 'number'
-      ? new Date(currentDate.getFullYear(), currentDate.getMonth(), dateVal)
-      : new Date(dateVal);
+    const dateObj = parseEventDate(dateVal);
     if (isNaN(dateObj.getTime())) return String(dateVal);
     return format(dateObj, 'dd MMMM yyyy', { locale: id });
   };
@@ -123,7 +128,7 @@ export default function CalendarView() {
            // mock data used day of month
            return e.date === parseInt(formattedDate) && isSameMonth(day, currentDate);
         } else if (typeof e.date === 'string') {
-           return isSameDay(new Date(e.date), day);
+           return isSameDay(parseEventDate(e.date), day);
         }
         return false;
       });
@@ -162,7 +167,7 @@ export default function CalendarView() {
         if (typeof e.date === 'number') {
            return e.date === day.getDate() && isSameMonth(day, currentDate);
         } else if (typeof e.date === 'string') {
-           return isSameDay(new Date(e.date), day);
+           return isSameDay(parseEventDate(e.date), day);
         }
         return false;
       });

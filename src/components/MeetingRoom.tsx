@@ -38,14 +38,6 @@ const TYPE_COLORS: Record<string, string> = {
   External: 'bg-emerald-100 text-emerald-700',
 };
 
-const MOCK_TRANSCRIPT: TranscriptLine[] = [
-  { id: '1', time: '19:12', speaker: 'Ahmad', text: 'Untuk kegiatan seminar bulan depan, bagaimana progres persiapan tempatnya?' },
-  { id: '2', time: '19:14', speaker: 'Mustofa', text: 'Saya sudah menghubungi pihak gedung, mereka meminta DP 50% minggu ini agar jadwal bisa dikunci.' },
-  { id: '3', time: '19:18', speaker: 'Hasan', text: 'Bagaimana dengan anggarannya? Apakah kita masih punya cukup dana dari kas organisasi?' },
-  { id: '4', time: '19:20', speaker: 'Mustofa', text: 'Kas masih cukup. Nanti saya akan buatkan pengajuannya, tapi Ahmad tolong buat proposal singkatnya paling lambat Jumat ya.' },
-  { id: '5', time: '19:22', speaker: 'Ahmad', text: 'Baik, proposal akan saya siapkan.' },
-];
-
 // ─── Create Meeting Form ───────────────────────────────────────────────────────
 
 function CreateMeetingForm({ onBack, onCreated }: { onBack: () => void; onCreated: (m: Meeting) => void }) {
@@ -441,12 +433,7 @@ function MeetingDetail({ meeting, onBack }: { meeting: Meeting; onBack: () => vo
 
         // Save transcript
         const finalTranscript = transcriptRef.current;
-        if (finalTranscript.length === 0) {
-          setTranscript(MOCK_TRANSCRIPT);
-          await updateMeeting(meeting.id, { transcript: MOCK_TRANSCRIPT });
-        } else {
-          await updateMeeting(meeting.id, { transcript: finalTranscript });
-        }
+        await updateMeeting(meeting.id, { transcript: finalTranscript });
       };
       setMediaRecorder(recorder);
       recorder.start();
