@@ -237,8 +237,8 @@ function MeetingList({ meetings, onSelect, onCreate }: {
 
   const filtered = meetings
     .filter(m => filter === 'all' ? true : m.status === filter)
-    .filter(m => m.title.toLowerCase().includes(search.toLowerCase()))
-    .sort((a, b) => b.date.localeCompare(a.date));
+    .filter(m => (m.title || '').toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
@@ -371,6 +371,22 @@ function MeetingDetail({ meeting, onBack }: { meeting: Meeting; onBack: () => vo
   useEffect(() => {
     transcriptRef.current = transcript;
   }, [transcript]);
+
+  // Clean up recording tracks and speech recognition on unmount
+  useEffect(() => {
+    return () => {
+      isRecordingRef.current = false;
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch { /* ignore */ }
+      }
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        try {
+          mediaRecorder.stop();
+          mediaRecorder.stream.getTracks().forEach(t => t.stop());
+        } catch { /* ignore */ }
+      }
+    };
+  }, [mediaRecorder]);
   const [summary, setSummary] = useState(meeting.summary || '');
   const [decisions, setDecisions] = useState<string[]>(meeting.decisions || []);
   const [actionItems, setActionItems] = useState(meeting.actionItems || []);

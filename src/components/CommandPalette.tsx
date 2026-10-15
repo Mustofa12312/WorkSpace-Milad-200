@@ -53,30 +53,30 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }: CommandP
 
   // Search results
   if (q) {
-    tasks.filter(t => t.title.toLowerCase().includes(q)).slice(0, 4).forEach(t => {
+    tasks.filter(t => (t.title || '').toLowerCase().includes(q)).slice(0, 4).forEach(t => {
       results.push({
-        id: t.id, type: 'task', title: t.title, subtitle: `Task · ${t.project} · ${t.status}`,
+        id: t.id, type: 'task', title: t.title || 'Untitled Task', subtitle: `Task · ${t.project || 'General'} · ${t.status || 'backlog'}`,
         icon: <CheckSquare size={15} className="text-primary-500" />,
         onSelect: () => { setSearchFocus({ type: 'task', id: t.id }); onNavigate('tasks'); onClose(); }
       });
     });
-    projects.filter(p => p.name.toLowerCase().includes(q)).slice(0, 3).forEach(p => {
+    projects.filter(p => (p.name || '').toLowerCase().includes(q)).slice(0, 3).forEach(p => {
       results.push({
-        id: p.id, type: 'project', title: p.name, subtitle: `Proyek · ${p.status}`,
+        id: p.id, type: 'project', title: p.name || 'Untitled Project', subtitle: `Proyek · ${p.status || 'Active'}`,
         icon: <FolderKanban size={15} className="text-emerald-500" />,
         onSelect: () => { setSearchFocus({ type: 'project', id: p.id }); onNavigate('projects'); onClose(); }
       });
     });
-    meetings.filter(m => m.title.toLowerCase().includes(q)).slice(0, 3).forEach(m => {
+    meetings.filter(m => (m.title || '').toLowerCase().includes(q)).slice(0, 3).forEach(m => {
       results.push({
-        id: m.id, type: 'meeting', title: m.title, subtitle: `Rapat · ${m.date} · ${m.status}`,
+        id: m.id, type: 'meeting', title: m.title || 'Untitled Meeting', subtitle: `Rapat · ${m.date || '-'} · ${m.status || 'scheduled'}`,
         icon: <CalendarDays size={15} className="text-indigo-500" />,
         onSelect: () => { setSearchFocus({ type: 'meeting', id: m.id }); onNavigate('meetings'); onClose(); }
       });
     });
-    team.filter(u => u.name.toLowerCase().includes(q)).slice(0, 3).forEach(u => {
+    team.filter(u => (u.name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q)).slice(0, 3).forEach(u => {
       results.push({
-        id: u.id, type: 'member', title: u.name, subtitle: `Anggota · ${u.role || 'Member'}`,
+        id: u.id, type: 'member', title: u.name || u.email || 'Member', subtitle: `Anggota · ${u.role || 'Member'}`,
         icon: <Users size={15} className="text-amber-500" />,
         onSelect: () => { setSearchFocus({ type: 'member', id: u.id }); onNavigate('team'); onClose(); }
       });

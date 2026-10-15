@@ -154,9 +154,10 @@ export default function KanbanBoard() {
 
   // Filter tasks based on search and priority
   const filteredTasks = tasks.filter(t => {
-    const matchesSearch = t.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          t.project.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          (t.assignee && t.assignee.toLowerCase().includes(searchTerm.toLowerCase()));
+    const query = searchTerm.toLowerCase();
+    const matchesSearch = (t.title || '').toLowerCase().includes(query) || 
+                          (t.project || '').toLowerCase().includes(query) ||
+                          (t.assignee && t.assignee.toLowerCase().includes(query));
     const matchesPriority = priorityFilter === 'All' || t.priority === priorityFilter;
     return matchesSearch && matchesPriority;
   });

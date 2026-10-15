@@ -35,15 +35,20 @@ export default function AgendaView() {
     tasks.forEach(t => {
       if (t.status === 'completed' || !t.dueDate || t.dueDate === 'No date') return;
       let dateObj: Date;
-      if (t.dueDate === 'Today') {
-         dateObj = new Date();
-      } else if (t.dueDate === 'Tomorrow') {
-         dateObj = new Date();
-         dateObj.setDate(dateObj.getDate() + 1);
+      const due = (t.dueDate || '').trim().toLowerCase();
+      if (due === 'today' || due === 'hari ini') {
+        dateObj = new Date();
+      } else if (due === 'tomorrow' || due === 'besok') {
+        dateObj = new Date();
+        dateObj.setDate(dateObj.getDate() + 1);
+      } else if (due === 'lusa') {
+        dateObj = new Date();
+        dateObj.setDate(dateObj.getDate() + 2);
       } else {
-         const parsed = new Date(t.dueDate);
-         if (isNaN(parsed.getTime())) return;
-         dateObj = parsed;
+        const dateString = t.dueDate.includes('T') ? t.dueDate : `${t.dueDate}T00:00:00`;
+        const parsed = new Date(dateString);
+        if (isNaN(parsed.getTime())) return;
+        dateObj = parsed;
       }
       
       items.push({
@@ -61,7 +66,8 @@ export default function AgendaView() {
     // Process Meetings
     meetings.forEach(m => {
       if (m.status === 'completed' || m.status === 'cancelled') return;
-      const parsed = new Date(m.date);
+      const dateString = m.date.includes('T') ? m.date : `${m.date}T00:00:00`;
+      const parsed = new Date(dateString);
       items.push({
         id: `meeting-${m.id}`,
         sourceType: 'meeting',
@@ -80,9 +86,10 @@ export default function AgendaView() {
     events.forEach(e => {
       let dateObj = new Date();
       if (typeof e.date === 'string') {
-        const parsed = new Date(e.date);
+        const dateString = e.date.includes('T') ? e.date : `${e.date}T00:00:00`;
+        const parsed = new Date(dateString);
         if (!isNaN(parsed.getTime())) dateObj = parsed;
-      } else {
+      } else if (typeof e.date === 'number') {
         dateObj.setDate(e.date as number);
       }
 

@@ -13,6 +13,19 @@ export default function DecisionLog({ onNavigate }: { onNavigate: (tab: string) 
   const [search, setSearch] = useState('');
   const [filterProject, setFilterProject] = useState('All');
 
+  const parseSafeDate = (d?: string) => {
+    if (!d) return new Date(0);
+    const parsed = new Date(d.includes('T') ? d : `${d}T00:00:00`);
+    return isNaN(parsed.getTime()) ? new Date(0) : parsed;
+  };
+
+  const formatDateDisplay = (dateStr?: string) => {
+    if (!dateStr) return '-';
+    const parsed = parseSafeDate(dateStr);
+    if (parsed.getTime() === 0) return dateStr;
+    return parsed.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+  };
+
   // Extract all decisions from all meetings
   const allDecisions = useMemo(() => {
     const decs: Array<{ id: string; text: string; meetingId: string; meetingTitle: string; date: string; projectId?: string; status: string }> = [];
@@ -23,19 +36,20 @@ export default function DecisionLog({ onNavigate }: { onNavigate: (tab: string) 
             id: `${m.id}-${index}`,
             text: d,
             meetingId: m.id,
-            meetingTitle: m.title,
-            date: m.date,
+            meetingTitle: m.title || 'Rapat',
+            date: m.date || '',
             projectId: m.projectId,
             status: m.approvalStatus || 'Draft',
           });
         });
       }
     });
-    return decs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return decs.sort((a, b) => parseSafeDate(b.date).getTime() - parseSafeDate(a.date).getTime());
   }, [meetings]);
 
   const filteredDecisions = allDecisions.filter(d => {
-    const matchesSearch = d.text.toLowerCase().includes(search.toLowerCase()) || d.meetingTitle.toLowerCase().includes(search.toLowerCase());
+    const query = search.toLowerCase();
+    const matchesSearch = (d.text || '').toLowerCase().includes(query) || (d.meetingTitle || '').toLowerCase().includes(query);
     const matchesProject = filterProject === 'All' || d.projectId === filterProject;
     return matchesSearch && matchesProject;
   });
@@ -120,7 +134,7 @@ export default function DecisionLog({ onNavigate }: { onNavigate: (tab: string) 
                         </button>
                         <span className="text-xs text-slate-500 flex items-center gap-1">
                           <Calendar size={12} />
-                          {new Date(d.date + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                          {formatDateDisplay(d.date)}
                         </span>
                       </div>
                     </td>

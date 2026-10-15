@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Search, FileText, FileSpreadsheet, FileIcon, Download, MoreVertical, Upload, X, FileUp } from 'lucide-react';
+import { Search, FileText, FileSpreadsheet, FileIcon, Download, Trash2, Upload, X, FileUp, AlertCircle } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import toast from 'react-hot-toast';
 
@@ -11,7 +11,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 
 export default function DocumentsView() {
-  const { documents, addDocument, currentUser, currentOrgId } = useAppStore();
+  const { documents, addDocument, deleteDocument, currentUser, currentOrgId } = useAppStore();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newDocName, setNewDocName] = useState('');
@@ -20,6 +20,7 @@ export default function DocumentsView() {
   
   // Preview State
   const [previewDoc, setPreviewDoc] = useState<DocType | null>(null);
+  const [confirmDeleteDoc, setConfirmDeleteDoc] = useState<DocType | null>(null);
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
@@ -208,18 +209,25 @@ export default function DocumentsView() {
                         {doc.size}
                       </td>
                       <td className="py-4 px-6 text-right">
-                        <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-                          <a 
-                            href={doc.url} 
-                            download 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="text-slate-400 hover:text-primary-600 p-2 rounded-lg hover:bg-primary-50 transition-colors flex items-center justify-center"
+                        <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                          {doc.url && (
+                            <a 
+                              href={doc.url} 
+                              download 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-slate-400 hover:text-primary-600 p-2 rounded-lg hover:bg-primary-50 transition-colors flex items-center justify-center"
+                              title="Unduh"
+                            >
+                              <Download size={18} />
+                            </a>
+                          )}
+                          <button 
+                            onClick={() => setConfirmDeleteDoc(doc)}
+                            className="text-slate-400 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition-colors"
+                            title="Hapus Dokumen"
                           >
-                            <Download size={18} />
-                          </a>
-                          <button className="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-100 transition-colors">
-                            <MoreVertical size={18} />
+                            <Trash2 size={18} />
                           </button>
                         </div>
                       </td>
@@ -322,6 +330,18 @@ export default function DocumentsView() {
                     Unduh
                   </a>
                 )}
+                <button
+                  onClick={() => {
+                    const toDelete = previewDoc;
+                    setPreviewDoc(null);
+                    setConfirmDeleteDoc(toDelete);
+                  }}
+                  className="flex items-center gap-1.5 bg-white border border-slate-200 text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                  title="Hapus"
+                >
+                  <Trash2 size={16} />
+                  Hapus
+                </button>
                 <button 
                   onClick={() => setPreviewDoc(null)} 
                   className="p-1.5 text-slate-500 hover:bg-slate-200 rounded-lg transition-colors"
@@ -349,6 +369,42 @@ export default function DocumentsView() {
                   </a>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {confirmDeleteDoc && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden p-6 text-center animate-in fade-in zoom-in duration-200">
+            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4 text-red-600">
+              <AlertCircle size={24} />
+            </div>
+            <h4 className="text-lg font-bold text-slate-800">Hapus Dokumen?</h4>
+            <p className="text-sm text-slate-500 mt-2">
+              Apakah Anda yakin ingin menghapus dokumen <strong className="text-slate-700">"{confirmDeleteDoc.name}"</strong>? Tindakan ini tidak dapat dibatalkan.
+            </p>
+            <div className="mt-6 flex gap-3 justify-center">
+              <button
+                type="button"
+                onClick={() => setConfirmDeleteDoc(null)}
+                className="px-4 py-2 border border-slate-200 text-slate-600 font-medium rounded-xl hover:bg-slate-50 transition-colors text-sm"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (confirmDeleteDoc) {
+                    await deleteDocument(confirmDeleteDoc.id);
+                    setConfirmDeleteDoc(null);
+                  }
+                }}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-xl transition-colors text-sm shadow-sm"
+              >
+                Hapus
+              </button>
             </div>
           </div>
         </div>

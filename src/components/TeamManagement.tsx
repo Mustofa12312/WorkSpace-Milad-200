@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from 'react';
 import { Search, UserPlus, MoreHorizontal, Mail, Shield, ShieldCheck, User, Clock, Trash2, Edit2, AlertCircle } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import toast from 'react-hot-toast';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -11,7 +10,7 @@ function cn(...inputs: ClassValue[]) {
 import { useAppStore } from '../store/useAppStore';
 
 export default function TeamManagement() {
-  const { team, invitations, createInvitation, deleteInvitation, currentUser } = useAppStore();
+  const { team, invitations, createInvitation, deleteInvitation, removeTeamMember, updateTeamMemberRole, currentUser, searchFocus, setSearchFocus } = useAppStore();
 
   const myRole = team.find(t => t.id === currentUser?.id)?.role || 'Member';
   const canInvite = myRole === 'Owner' || myRole === 'Admin';
@@ -54,6 +53,19 @@ export default function TeamManagement() {
   const [roleFilter, setRoleFilter] = useState('All Roles');
   const [statusFilter, setStatusFilter] = useState('All Status');
 
+  // Handle global search focus
+  useEffect(() => {
+    if (searchFocus?.type === 'member') {
+      const member = team.find(m => m.id === searchFocus.id);
+      if (member) {
+        setTimeout(() => {
+          setSearchTerm(member.name);
+          setSearchFocus(null);
+        }, 0);
+      }
+    }
+  }, [searchFocus, team, setSearchFocus]);
+
   const displayTeam = [
     ...team,
     ...invitations.map(inv => ({
@@ -68,7 +80,7 @@ export default function TeamManagement() {
 
   const filteredTeam = displayTeam.filter(member => {
     const query = searchTerm.toLowerCase();
-    const matchesSearch = member.name.toLowerCase().includes(query) || (member.email || '').toLowerCase().includes(query);
+    const matchesSearch = (member.name || '').toLowerCase().includes(query) || (member.email || '').toLowerCase().includes(query);
     const matchesRole = roleFilter === 'All Roles' || member.role?.toLowerCase() === roleFilter.toLowerCase();
     const matchesStatus = statusFilter === 'All Status' || member.status?.toLowerCase() === statusFilter.toLowerCase();
     return matchesSearch && matchesRole && matchesStatus;
@@ -93,13 +105,7 @@ export default function TeamManagement() {
         if (confirmDialog.memberId.startsWith('inv-')) {
           await deleteInvitation(confirmDialog.memberId);
         } else {
-          // In a full app, you might use a removeTeamMember function here
-          const { removeTeamMember } = useAppStore.getState();
-          if (removeTeamMember) {
-            await removeTeamMember(confirmDialog.memberId);
-          } else {
-            toast.success(`${confirmDialog.memberName} berhasil dikeluarkan dari tim.`);
-          }
+          await removeTeamMember(confirmDialog.memberId);
         }
       } catch (e) {
         console.error(e);
@@ -111,10 +117,7 @@ export default function TeamManagement() {
   const handleUpdateRole = async (newRole: string) => {
     if (roleUpdateDialog.memberId) {
       try {
-        const { updateTeamMemberRole } = useAppStore.getState();
-        if (updateTeamMemberRole) {
-          await updateTeamMemberRole(roleUpdateDialog.memberId, newRole);
-        }
+        await updateTeamMemberRole(roleUpdateDialog.memberId, newRole);
       } catch (e) {
         console.error(e);
       }

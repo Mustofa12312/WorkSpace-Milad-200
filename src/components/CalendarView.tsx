@@ -19,15 +19,30 @@ import { useAppStore, type Event } from '../store/useAppStore';
 export default function CalendarView() {
   const { events, addEvent, updateEvent, deleteEvent } = useAppStore();
 
+  const formatTimeTo24H = (timeStr?: string) => {
+    if (!timeStr) return '10:00';
+    if (/^\d{2}:\d{2}$/.test(timeStr)) return timeStr;
+    const match = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+    if (match) {
+      let hours = parseInt(match[1], 10);
+      const minutes = match[2];
+      const period = match[3]?.toUpperCase();
+      if (period === 'PM' && hours < 12) hours += 12;
+      if (period === 'AM' && hours === 12) hours = 0;
+      return `${hours.toString().padStart(2, '0')}:${minutes}`;
+    }
+    return timeStr.slice(0, 5);
+  };
+
   const [modalMode, setModalMode] = useState<'closed' | 'create' | 'edit' | 'view'>('closed');
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
-  const [newEvent, setNewEvent] = useState({ title: '', date: '', time: '10:00 AM', type: 'Rapat', personInCharge: '', location: '' });
+  const [newEvent, setNewEvent] = useState({ title: '', date: '', time: '10:00', type: 'Rapat', personInCharge: '', location: '' });
   const [viewType, setViewType] = useState<'month' | 'week'>('month');
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const openNewEventModal = () => {
     setSelectedEvent(null);
-    setNewEvent({ title: '', date: '', time: '10:00 AM', type: 'Rapat', personInCharge: '', location: '' });
+    setNewEvent({ title: '', date: '', time: '10:00', type: 'Rapat', personInCharge: '', location: '' });
     setModalMode('create');
   };
 
@@ -45,7 +60,7 @@ export default function CalendarView() {
     setNewEvent({
       title: selectedEvent.title,
       date: dateStr,
-      time: selectedEvent.time,
+      time: formatTimeTo24H(selectedEvent.time),
       type: selectedEvent.type || 'Rapat',
       personInCharge: selectedEvent.personInCharge || '',
       location: selectedEvent.location || ''
@@ -97,7 +112,7 @@ export default function CalendarView() {
     
     setModalMode('closed');
     setSelectedEvent(null);
-    setNewEvent({ title: '', date: '', time: '10:00 AM', type: 'Rapat', personInCharge: '', location: '' });
+    setNewEvent({ title: '', date: '', time: '10:00', type: 'Rapat', personInCharge: '', location: '' });
   };
 
   const prevPeriod = () => {

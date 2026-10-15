@@ -99,7 +99,8 @@ export default function DashboardLayout() {
   const overdueTasksCount = tasks.filter(t => {
     if (t.status === 'completed') return false;
     if (!t.dueDate || t.dueDate === 'No date') return false;
-    const parsed = new Date(t.dueDate);
+    const dateString = t.dueDate.includes('T') ? t.dueDate : `${t.dueDate}T23:59:59`;
+    const parsed = new Date(dateString);
     if (isNaN(parsed.getTime())) return false;
     return parsed < new Date();
   }).length;
@@ -421,7 +422,10 @@ export default function DashboardLayout() {
                             </div>
                             <p className="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
                               <Calendar size={10} />
-                              {new Date(m.date + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} · {m.startTime}
+                              {(() => {
+                                const d = m.date ? new Date(m.date.includes('T') ? m.date : `${m.date}T00:00:00`) : null;
+                                return d && !isNaN(d.getTime()) ? d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : (m.date || '-');
+                              })()} · {m.startTime}
                             </p>
                           </div>
                         ))}
