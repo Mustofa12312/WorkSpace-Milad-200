@@ -55,6 +55,9 @@ export const useAppStore = create<AppState>()((...a) => {
           const list = snapshot.docs.map(d => ({ ...(d.data() as object), id: d.id }));
           set({ [stateKey]: list } as Partial<AppState>);
         }, (error) => {
+          if (colName === 'invitations' && (error as { code?: string })?.code === 'permission-denied') {
+            return;
+          }
           console.error(`Error syncing ${colName}:`, error);
         });
         unsubscribers.push(unsubscribe);

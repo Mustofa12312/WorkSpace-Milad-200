@@ -388,7 +388,7 @@ function DroppableColumn({ column, tasks, onQuickAdd, onOpenDetail }: {
     <div 
       ref={setNodeRef}
       className={cn(
-        "flex-shrink-0 w-80 md:w-80 w-[85vw] snap-center bg-slate-100/50 rounded-2xl flex flex-col max-h-full border transition-colors",
+        "flex-shrink-0 w-[85vw] md:w-80 snap-center bg-slate-100/50 rounded-2xl flex flex-col max-h-full border transition-colors",
         isOver ? "border-primary-400 bg-primary-50/30 shadow-sm" : "border-slate-200/60"
       )}
     >

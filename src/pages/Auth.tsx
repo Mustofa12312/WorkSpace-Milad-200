@@ -1,7 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Mail, Lock, ArrowRight } from 'lucide-react';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { Mail, Lock, ArrowRight, X } from 'lucide-react';
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signInWithPopup, 
+  GoogleAuthProvider,
+  GithubAuthProvider,
+  sendPasswordResetEmail
+} from 'firebase/auth';
 import { useSearchParams } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { auth } from '../lib/firebase';
 import { toAuthMessage } from '../lib/authErrors';
 
@@ -14,6 +22,9 @@ export default function Auth() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [isResetting, setIsResetting] = useState(false);
   const [searchParams] = useSearchParams();
   const inviteId = searchParams.get('inviteId');
 
@@ -50,6 +61,34 @@ export default function Auth() {
     } catch (err: unknown) {
       console.error(err);
       setError(toAuthMessage(err, 'Login Google gagal. Silakan coba lagi.'));
+    }
+  };
+
+  const handleGithubLogin = async () => {
+    setError('');
+    const provider = new GithubAuthProvider();
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (err: unknown) {
+      console.error(err);
+      setError(toAuthMessage(err, 'Login GitHub gagal. Silakan coba lagi.'));
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetEmail) return;
+    setIsResetting(true);
+    try {
+      await sendPasswordResetEmail(auth, resetEmail);
+      toast.success('Tautan reset kata sandi telah dikirim ke email Anda.');
+      setShowForgotModal(false);
+      setResetEmail('');
+    } catch (err: unknown) {
+      console.error(err);
+      toast.error(toAuthMessage(err, 'Gagal mengirim email reset kata sandi.'));
+    } finally {
+      setIsResetting(false);
     }
   };
 
@@ -95,7 +134,15 @@ export default function Auth() {
             <div>
               <div className="flex justify-between items-center mb-1.5">
                 <label className="block text-sm font-semibold text-slate-700">Password</label>
-                {isLogin && <a href="#" className="text-xs text-primary-600 font-medium hover:underline">Forgot password?</a>}
+                {isLogin && (
+                  <button 
+                    type="button" 
+                    onClick={() => { setShowForgotModal(true); setResetEmail(email); }} 
+                    className="text-xs text-primary-600 font-medium hover:underline focus:outline-none"
+                  >
+                    Forgot password?
+                  </button>
+                )}
               </div>
               <div className="relative flex items-center">
                 <Lock className="absolute left-3 text-slate-400" size={18} />
@@ -144,7 +191,11 @@ export default function Auth() {
                 </svg>
                 Google
               </button>
-              <button className="flex items-center justify-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 py-2.5 rounded-xl text-sm font-semibold text-slate-600 transition-colors">
+              <button 
+                type="button"
+                onClick={handleGithubLogin}
+                className="flex items-center justify-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 py-2.5 rounded-xl text-sm font-semibold text-slate-600 transition-colors"
+              >
                 <svg className="w-5 h-5 text-slate-800" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.45-1.15-1.11-1.46-1.11-1.46-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2Z"/>
                 </svg>
@@ -165,6 +216,58 @@ export default function Auth() {
 
         </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      {showForgotModal && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl border border-slate-100 animate-in fade-in zoom-in duration-150">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-bold text-slate-800 text-lg">Reset Kata Sandi</h3>
+              <button 
+                onClick={() => setShowForgotModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <p className="text-slate-500 text-xs mb-4">
+              Masukkan alamat email akun Anda. Kami akan mengirimkan tautan untuk mengatur ulang kata sandi.
+            </p>
+            <form onSubmit={handleResetPassword} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Email</label>
+                <div className="relative flex items-center">
+                  <Mail className="absolute left-3 text-slate-400" size={16} />
+                  <input 
+                    type="email" 
+                    required
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                    placeholder="name@company.com"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowForgotModal(false)}
+                  className="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-xl"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={isResetting}
+                  className="px-4 py-2 text-xs font-semibold text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 rounded-xl shadow-sm"
+                >
+                  {isResetting ? 'Mengirim...' : 'Kirim Tautan'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

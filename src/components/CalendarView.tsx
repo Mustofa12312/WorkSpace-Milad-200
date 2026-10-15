@@ -53,6 +53,14 @@ export default function CalendarView() {
     setModalMode('edit');
   };
 
+  const getFormattedEventDate = (dateVal: string | number) => {
+    const dateObj = typeof dateVal === 'number'
+      ? new Date(currentDate.getFullYear(), currentDate.getMonth(), dateVal)
+      : new Date(dateVal);
+    if (isNaN(dateObj.getTime())) return String(dateVal);
+    return format(dateObj, 'dd MMMM yyyy', { locale: id });
+  };
+
   const handleNewEvent = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newEvent.title || newEvent.title.trim() === '') return;
@@ -310,7 +318,7 @@ export default function CalendarView() {
                     </div>
                     <h3 className="text-2xl font-bold mb-2">{selectedEvent.title}</h3>
                     <div className="flex flex-col gap-2 text-white/90 text-sm mt-4">
-                      <div className="flex items-center gap-2"><CalendarIcon size={16} className="opacity-75" /> {format(new Date(selectedEvent.date), 'dd MMMM yyyy', { locale: id })}</div>
+                      <div className="flex items-center gap-2"><CalendarIcon size={16} className="opacity-75" /> {getFormattedEventDate(selectedEvent.date)}</div>
                       <div className="flex items-center gap-2"><Clock size={16} className="opacity-75" /> {selectedEvent.time}</div>
                     </div>
                   </div>
@@ -366,7 +374,7 @@ export default function CalendarView() {
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Waktu</label>
-                        <input type="text" required value={newEvent.time} onChange={e => setNewEvent({...newEvent, time: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition-all" placeholder="10:00 AM" />
+                        <input type="time" required value={newEvent.time} onChange={e => setNewEvent({...newEvent, time: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition-all" />
                       </div>
                     </div>
                     <div>

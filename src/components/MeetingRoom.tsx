@@ -92,7 +92,6 @@ function CreateMeetingForm({ onBack, onCreated }: { onBack: () => void; onCreate
       transcript: [],
     };
     await addMeeting(meeting);
-    toast.success('Rapat berhasil dibuat!');
     onCreated(meeting);
   };
 
@@ -252,7 +251,6 @@ function MeetingList({ meetings, onSelect, onCreate }: {
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     await deleteMeeting(id);
-    toast.success('Rapat dihapus');
   };
 
   return (

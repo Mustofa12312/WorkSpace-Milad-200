@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -49,8 +49,11 @@ export default function DashboardLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [isCmdOpen, setIsCmdOpen] = useState(false);
-  const { tasks, meetings, projects, setupSubscriptions, currentUser, setCurrentUser, team, orgName, events } = useAppStore();
+  const profileRef = useRef<HTMLDivElement>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
+  const { tasks, meetings, projects, currentUser, setCurrentUser, team, orgName, events } = useAppStore();
   const navigate = useNavigate();
 
   // Ctrl+K / Cmd+K shortcut
@@ -63,6 +66,20 @@ export default function DashboardLayout() {
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
+  }, []);
+
+  // Close profile/notif dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setIsProfileOpen(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setIsNotifOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const handleLogout = async () => {
@@ -79,7 +96,13 @@ export default function DashboardLayout() {
 
   // Dynamic dashboard stats
   const activeTasksCount = tasks.filter(t => t.status !== 'completed' && t.status !== 'backlog').length;
-  const overdueTasksCount = tasks.filter(t => t.status !== 'completed').length;
+  const overdueTasksCount = tasks.filter(t => {
+    if (t.status === 'completed') return false;
+    if (!t.dueDate || t.dueDate === 'No date') return false;
+    const parsed = new Date(t.dueDate);
+    if (isNaN(parsed.getTime())) return false;
+    return parsed < new Date();
+  }).length;
   const upcomingMeetingsCount = meetings.filter(m => m.status === 'scheduled').length;
   const completedTasksPercent = tasks.length > 0
     ? Math.round((tasks.filter(t => t.status === 'completed').length / tasks.length) * 100)
@@ -95,9 +118,8 @@ export default function DashboardLayout() {
     return 'Selamat Malam';
   };
 
-  React.useEffect(() => {
-    setupSubscriptions();
-  }, [setupSubscriptions]);
+  // Subscriptions are already started by App.tsx via setCurrentOrgId.
+  // No duplicate setupSubscriptions call needed here.
 
   return (
     <div className="flex h-screen bg-slate-50 text-slate-900 overflow-hidden relative">
@@ -196,18 +218,54 @@ export default function DashboardLayout() {
               <Plus size={15} /> Buat Baru
             </button>
 
-            <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors relative">
-              <Bell size={20} />
-              {(upcomingMeetingsCount > 0 || overdueTasksCount > 0) && (
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
+            <div className="relative" ref={notifRef}>
+              <button
+                onClick={() => { setIsNotifOpen(!isNotifOpen); setIsProfileOpen(false); }}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors relative"
+              >
+                <Bell size={20} />
+                {(upcomingMeetingsCount > 0 || overdueTasksCount > 0) && (
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
+                )}
+              </button>
+              {isNotifOpen && (
+                <div className="absolute right-0 mt-2 w-72 bg-white border border-slate-200 rounded-xl shadow-lg py-1 z-50">
+                  <div className="px-4 py-2.5 border-b border-slate-100">
+                    <p className="text-sm font-bold text-slate-800">Notifikasi</p>
+                  </div>
+                  {overdueTasksCount > 0 && (
+                    <button onClick={() => { setActiveTab('tasks'); setIsNotifOpen(false); }} className="w-full text-left px-4 py-3 hover:bg-slate-50 flex items-center gap-3 transition-colors">
+                      <span className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0"><CheckSquare size={14} className="text-red-600" /></span>
+                      <div>
+                        <p className="text-sm font-medium text-slate-800">{overdueTasksCount} tugas terlambat</p>
+                        <p className="text-xs text-slate-500">Perlu segera ditindaklanjuti</p>
+                      </div>
+                    </button>
+                  )}
+                  {upcomingMeetingsCount > 0 && (
+                    <button onClick={() => { setActiveTab('meetings'); setIsNotifOpen(false); }} className="w-full text-left px-4 py-3 hover:bg-slate-50 flex items-center gap-3 transition-colors">
+                      <span className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0"><CalendarDays size={14} className="text-blue-600" /></span>
+                      <div>
+                        <p className="text-sm font-medium text-slate-800">{upcomingMeetingsCount} rapat terjadwal</p>
+                        <p className="text-xs text-slate-500">Rapat yang akan datang</p>
+                      </div>
+                    </button>
+                  )}
+                  {overdueTasksCount === 0 && upcomingMeetingsCount === 0 && (
+                    <div className="px-4 py-8 text-center text-sm text-slate-400">
+                      <Bell size={24} className="mx-auto mb-2 text-slate-200" />
+                      Tidak ada notifikasi baru
+                    </div>
+                  )}
+                </div>
               )}
-            </button>
+            </div>
 
             <div className="h-6 w-px bg-slate-200" />
 
-            <div className="relative">
+            <div className="relative" ref={profileRef}>
               <button
-                onClick={() => setIsProfileOpen(!isProfileOpen)}
+                onClick={() => { setIsProfileOpen(!isProfileOpen); setIsNotifOpen(false); }}
                 className="flex items-center gap-2.5 hover:bg-slate-50 p-1.5 rounded-full pr-3 transition-colors border border-transparent hover:border-slate-200 focus:outline-none"
               >
                 <img

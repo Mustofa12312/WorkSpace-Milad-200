@@ -49,6 +49,11 @@ export default function TeamManagement() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Filter states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [roleFilter, setRoleFilter] = useState('All Roles');
+  const [statusFilter, setStatusFilter] = useState('All Status');
+
   const displayTeam = [
     ...team,
     ...invitations.map(inv => ({
@@ -60,6 +65,14 @@ export default function TeamManagement() {
       lastActive: '-'
     }))
   ];
+
+  const filteredTeam = displayTeam.filter(member => {
+    const query = searchTerm.toLowerCase();
+    const matchesSearch = member.name.toLowerCase().includes(query) || (member.email || '').toLowerCase().includes(query);
+    const matchesRole = roleFilter === 'All Roles' || member.role?.toLowerCase() === roleFilter.toLowerCase();
+    const matchesStatus = statusFilter === 'All Status' || member.status?.toLowerCase() === statusFilter.toLowerCase();
+    return matchesSearch && matchesRole && matchesStatus;
+  });
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -162,19 +175,29 @@ export default function TeamManagement() {
             <Search size={16} className="text-slate-400" />
             <input 
               type="text" 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Cari berdasarkan nama atau email..." 
               className="bg-transparent border-none outline-none ml-2 w-full text-sm placeholder-slate-400"
             />
           </div>
           <div className="flex gap-2 w-full md:w-auto">
-            <select className="flex-1 md:flex-none bg-white border border-slate-200 text-slate-600 text-sm rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-primary-500/20">
+            <select 
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value)}
+              className="flex-1 md:flex-none bg-white border border-slate-200 text-slate-600 text-sm rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-primary-500/20"
+            >
               <option>All Roles</option>
               <option>Admin</option>
               <option>Manager</option>
               <option>Member</option>
               <option>Viewer</option>
             </select>
-            <select className="flex-1 md:flex-none bg-white border border-slate-200 text-slate-600 text-sm rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-primary-500/20">
+            <select 
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="flex-1 md:flex-none bg-white border border-slate-200 text-slate-600 text-sm rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-primary-500/20"
+            >
               <option>All Status</option>
               <option>Active</option>
               <option>Pending</option>
@@ -187,7 +210,7 @@ export default function TeamManagement() {
           
           {/* Mobile View (Stacked Cards) */}
           <div className="md:hidden divide-y divide-slate-100">
-            {displayTeam.map((member) => (
+            {filteredTeam.map((member) => (
               <div key={member.id} className="p-4 flex flex-col gap-3">
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-3">
@@ -263,7 +286,7 @@ export default function TeamManagement() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {displayTeam.map((member) => (
+              {filteredTeam.map((member) => (
                 <tr key={member.id} className="hover:bg-slate-50/50 transition-colors group">
                   <td className="py-4 px-6">
                     <div className="flex items-center gap-3">

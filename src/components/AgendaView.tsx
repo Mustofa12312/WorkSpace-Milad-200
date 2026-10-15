@@ -33,10 +33,8 @@ export default function AgendaView() {
 
     // Process Tasks
     tasks.forEach(t => {
-      if (t.status === 'completed' || !t.dueDate) return;
-      // Some dates might be "Today", "Oct 15", or YYYY-MM-DD. Let's try to parse YYYY-MM-DD
-      // Mock data uses string like "2023-10-15" or simple formats.
-      let dateObj = new Date();
+      if (t.status === 'completed' || !t.dueDate || t.dueDate === 'No date') return;
+      let dateObj: Date;
       if (t.dueDate === 'Today') {
          dateObj = new Date();
       } else if (t.dueDate === 'Tomorrow') {
@@ -44,7 +42,8 @@ export default function AgendaView() {
          dateObj.setDate(dateObj.getDate() + 1);
       } else {
          const parsed = new Date(t.dueDate);
-         if (!isNaN(parsed.getTime())) dateObj = parsed;
+         if (isNaN(parsed.getTime())) return;
+         dateObj = parsed;
       }
       
       items.push({

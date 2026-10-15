@@ -18,12 +18,11 @@ function App() {
         // Provision team/{uid} first: Firestore rules resolve the caller's
         // organization from it, so subscriptions must not start before it exists.
         const profile = await ensureTeamMember(user);
-        if (profile.organizationId) {
-          useAppStore.getState().setCurrentOrgId(profile.organizationId);
-        } else {
-          useAppStore.getState().setupSubscriptions();
-        }
         setCurrentUser(profile);
+        // setCurrentOrgId triggers setupSubscriptions internally.
+        // For new users without an invitation, orgId defaults to their own uid.
+        const orgId = profile.organizationId || user.uid;
+        useAppStore.getState().setCurrentOrgId(orgId);
       } else {
         useAppStore.getState().teardownSubscriptions();
         setCurrentUser(null);

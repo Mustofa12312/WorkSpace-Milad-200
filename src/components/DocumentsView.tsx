@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Search, Filter, FileText, FileSpreadsheet, FileIcon, Download, MoreVertical, Upload, X, FileUp } from 'lucide-react';
+import { Search, FileText, FileSpreadsheet, FileIcon, Download, MoreVertical, Upload, X, FileUp } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import toast from 'react-hot-toast';
 
@@ -20,6 +20,17 @@ export default function DocumentsView() {
   
   // Preview State
   const [previewDoc, setPreviewDoc] = useState<DocType | null>(null);
+
+  // Search & Filter State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedType, setSelectedType] = useState('All');
+
+  const filteredDocuments = documents.filter(doc => {
+    const query = searchQuery.toLowerCase();
+    const matchesSearch = doc.name.toLowerCase().includes(query) || (doc.owner || '').toLowerCase().includes(query);
+    const matchesType = selectedType === 'All' || doc.type === selectedType;
+    return matchesSearch && matchesType;
+  });
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
@@ -123,15 +134,24 @@ export default function DocumentsView() {
             <Search size={16} className="text-slate-400" />
             <input 
               type="text" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Cari dokumen..." 
               className="bg-transparent border-none outline-none ml-2 w-full text-sm placeholder-slate-400"
             />
           </div>
-          <div className="flex gap-2 self-end md:self-auto">
-            <button className="bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-xl text-sm font-medium hover:bg-slate-50 transition-colors flex items-center gap-2">
-              <Filter size={16} />
-              Filter
-            </button>
+          <div className="flex gap-2 self-end md:self-auto items-center">
+            <select
+              value={selectedType}
+              onChange={(e) => setSelectedType(e.target.value)}
+              className="bg-white border border-slate-200 text-slate-700 px-3 py-2 rounded-xl text-sm font-medium hover:bg-slate-50 transition-colors outline-none focus:ring-2 focus:ring-primary-500/20"
+            >
+              <option value="All">Semua Tipe</option>
+              <option value="pdf">PDF</option>
+              <option value="sheet">Spreadsheet</option>
+              <option value="doc">Dokumen</option>
+              <option value="image">Gambar</option>
+            </select>
           </div>
         </div>
 
@@ -164,7 +184,7 @@ export default function DocumentsView() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {documents.map((doc) => (
+                  {filteredDocuments.map((doc) => (
                     <tr 
                       key={doc.id} 
                       onClick={() => setPreviewDoc(doc)}

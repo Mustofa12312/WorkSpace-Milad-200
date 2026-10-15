@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { Settings as SettingsIcon, Building, Bell, Shield, Paintbrush, Globe, Save, Plus } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Settings as SettingsIcon, Building, Bell, Shield, Paintbrush, Globe, Save, Check } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import toast from 'react-hot-toast';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -13,10 +14,46 @@ export default function Settings() {
   const { orgName, setOrgName } = useAppStore();
   const [activeTab, setActiveTab] = useState('general');
   const [tempName, setTempName] = useState(orgName);
+  const [description, setDescription] = useState(
+    () => localStorage.getItem('workspace_description') || 'Kepanitiaan Milad 200, mengurus segala persiapan acara.'
+  );
+  const [timezone, setTimezone] = useState('Asia/Jakarta (WIB)');
+  const [language, setLanguage] = useState('Bahasa Indonesia');
+  const [selectedColor, setSelectedColor] = useState('#0ea5e9');
+  const [logoPreview, setLogoPreview] = useState<string | null>(
+    () => localStorage.getItem('workspace_logo') || null
+  );
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSave = () => {
     setOrgName(tempName);
-    alert('Settings saved!');
+    localStorage.setItem('workspace_description', description);
+    localStorage.setItem('workspace_timezone', timezone);
+    localStorage.setItem('workspace_language', language);
+    toast.success('Pengaturan berhasil disimpan!');
+  };
+
+  const handleSaveBranding = () => {
+    localStorage.setItem('workspace_color', selectedColor);
+    if (logoPreview) {
+      localStorage.setItem('workspace_logo', logoPreview);
+    }
+    toast.success('Merek berhasil diperbarui!');
+  };
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Ukuran file maksimal 2MB');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setLogoPreview(reader.result as string);
+      toast.success('Logo berhasil dipilih');
+    };
+    reader.readAsDataURL(file);
   };
 
   return (
@@ -92,7 +129,12 @@ export default function Settings() {
 
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-1.5">Deskripsi Ruang Kerja</label>
-                    <textarea rows={3} defaultValue="Kepanitiaan Milad 200, mengurus segala persiapan acara." className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" />
+                    <textarea 
+                      rows={3} 
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" 
+                    />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
@@ -100,7 +142,11 @@ export default function Settings() {
                       <label className="block text-sm font-semibold text-slate-700 mb-1.5">Zona Waktu</label>
                       <div className="relative">
                         <Globe size={16} className="absolute left-3 top-3 text-slate-400" />
-                        <select className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 appearance-none">
+                        <select 
+                          value={timezone}
+                          onChange={(e) => setTimezone(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 appearance-none"
+                        >
                           <option>Asia/Jakarta (WIB)</option>
                           <option>Asia/Makassar (WITA)</option>
                           <option>Asia/Jayapura (WIT)</option>
@@ -109,7 +155,11 @@ export default function Settings() {
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-slate-700 mb-1.5">Bahasa</label>
-                      <select className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+                      <select 
+                        value={language}
+                        onChange={(e) => setLanguage(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                      >
                         <option>English</option>
                         <option>Bahasa Indonesia</option>
                       </select>
@@ -133,11 +183,33 @@ export default function Settings() {
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-2">Logo Organisasi</label>
                     <div className="flex items-center gap-6">
-                      <div className="h-20 w-20 bg-gradient-to-br from-primary-500 to-indigo-600 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-md">
-                        M
-                      </div>
+                      <input 
+                        type="file" 
+                        ref={fileInputRef} 
+                        onChange={handleLogoUpload} 
+                        accept="image/*" 
+                        className="hidden" 
+                      />
+                      {logoPreview ? (
+                        <img 
+                          src={logoPreview} 
+                          alt="Logo" 
+                          className="h-20 w-20 rounded-2xl object-cover shadow-md border border-slate-200" 
+                        />
+                      ) : (
+                        <div 
+                          className="h-20 w-20 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-md"
+                          style={{ backgroundColor: selectedColor }}
+                        >
+                          {tempName ? tempName.charAt(0).toUpperCase() : 'M'}
+                        </div>
+                      )}
                       <div>
-                        <button className="bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 px-4 py-2 rounded-xl text-sm font-medium transition-colors mb-2">
+                        <button 
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 px-4 py-2 rounded-xl text-sm font-medium transition-colors mb-2"
+                        >
                           Unggah Logo Baru
                         </button>
                         <p className="text-xs text-slate-500">Rekomendasi ukuran: 512x512px. PNG atau JPG di bawah 2MB.</p>
@@ -148,18 +220,29 @@ export default function Settings() {
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-2">Warna Utama</label>
                     <div className="flex gap-3">
-                      {['#0ea5e9', '#6366f1', '#a855f7', '#ec4899', '#10b981', '#f59e0b'].map((color, i) => (
-                        <button key={i} className="h-8 w-8 rounded-full border-2 border-white shadow-sm ring-2 ring-transparent focus:ring-slate-300 hover:scale-110 transition-transform" style={{ backgroundColor: color }}></button>
+                      {['#0ea5e9', '#6366f1', '#a855f7', '#ec4899', '#10b981', '#f59e0b'].map((color) => (
+                        <button 
+                          key={color} 
+                          type="button"
+                          onClick={() => setSelectedColor(color)}
+                          className={cn(
+                            "h-8 w-8 rounded-full border-2 border-white shadow-sm flex items-center justify-center hover:scale-110 transition-transform",
+                            selectedColor === color ? "ring-2 ring-primary-500 scale-105" : "ring-transparent"
+                          )} 
+                          style={{ backgroundColor: color }}
+                        >
+                          {selectedColor === color && <Check size={14} className="text-white drop-shadow" />}
+                        </button>
                       ))}
-                      <div className="h-8 w-8 rounded-full border-2 border-dashed border-slate-300 flex items-center justify-center cursor-pointer hover:bg-slate-50 transition-colors">
-                        <Plus size={14} className="text-slate-400" />
-                      </div>
                     </div>
                   </div>
                 </div>
 
                 <div className="mt-8 flex justify-end">
-                  <button className="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow-sm shadow-primary-500/30 transition-all hover:-translate-y-0.5">
+                  <button 
+                    onClick={handleSaveBranding}
+                    className="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow-sm shadow-primary-500/30 transition-all hover:-translate-y-0.5"
+                  >
                     <Save size={16} /> Simpan Perubahan
                   </button>
                 </div>
