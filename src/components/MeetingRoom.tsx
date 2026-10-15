@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Mic, Square, Play, Pause, Video, Users, FileText, Sparkles,
   CheckCircle2, Clock, Calendar, Link as LinkIcon,
@@ -365,6 +365,12 @@ function MeetingDetail({ meeting, onBack }: { meeting: Meeting; onBack: () => vo
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
+  const restartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isSpeechSupported, setIsSpeechSupported] = useState(true);
+  const [isSpeechActive, setIsSpeechActive] = useState(false);
+  const [manualSpeaker, setManualSpeaker] = useState(meeting.organizer || 'Speaker');
+  const [manualText, setManualText] = useState('');
+
   const transcriptRef = useRef<TranscriptLine[]>(meeting.transcript || []);
   const [transcript, setTranscript] = useState<TranscriptLine[]>(meeting.transcript || []);
 
@@ -376,8 +382,9 @@ function MeetingDetail({ meeting, onBack }: { meeting: Meeting; onBack: () => vo
   useEffect(() => {
     return () => {
       isRecordingRef.current = false;
+      if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
       if (recognitionRef.current) {
-        try { recognitionRef.current.stop(); } catch { /* ignore */ }
+        try { recognitionRef.current.abort(); } catch { /* ignore */ }
       }
       if (mediaRecorder && mediaRecorder.state !== 'inactive') {
         try {
@@ -424,50 +431,31 @@ function MeetingDetail({ meeting, onBack }: { meeting: Meeting; onBack: () => vo
     return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
-      const chunks: BlobPart[] = [];
-      recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
-      recorder.onstop = async () => {
-        // Ensure content type starts with audio/ to satisfy Storage rules
-        const actualMimeType = recorder.mimeType || 'audio/webm';
-        const safeType = actualMimeType.startsWith('audio/') ? actualMimeType : 'audio/webm';
-        const blob = new Blob(chunks, { type: safeType });
-        const orgId = useAppStore.getState().currentUser?.organizationId || useAppStore.getState().currentOrgId;
-        try {
-          const storageRef = ref(storage, `orgs/${orgId}/recordings/meeting_${meeting.id}.webm`);
-          await uploadBytes(storageRef, blob, { contentType: blob.type });
-          const url = await getDownloadURL(storageRef);
-          await updateMeeting(meeting.id, { recordingUrl: url, status: 'completed' });
-          toast.success('Rekaman tersimpan!');
-        } catch (e) {
-          console.error('Upload failed', e);
-          toast.error('Gagal mengunggah rekaman. Namun transkrip tetap disimpan.');
-        }
+  const speechEngineRef = useRef<() => void>(() => {});
 
-        // Save transcript
-        const finalTranscript = transcriptRef.current;
-        await updateMeeting(meeting.id, { transcript: finalTranscript });
-      };
-      setMediaRecorder(recorder);
-      recorder.start();
-      setRecordingState('recording');
-      isRecordingRef.current = true;
-      await updateMeeting(meeting.id, { status: 'ongoing' });
-
-      // Start Realtime Transcription
+  useEffect(() => {
+    speechEngineRef.current = () => {
+      if (!isRecordingRef.current) return;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      if (SpeechRecognition) {
+      if (!SpeechRecognition) {
+        setIsSpeechSupported(false);
+        setIsSpeechActive(false);
+        return;
+      }
+
+      try {
+        if (recognitionRef.current) {
+          try { recognitionRef.current.abort(); } catch { /* ignore */ }
+        }
+
         const recognition = new SpeechRecognition();
         recognition.continuous = true;
         recognition.interimResults = true;
         recognition.lang = 'id-ID';
-        
+
         let currentLineId = `line-${Date.now()}`;
-        
+
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         recognition.onresult = (event: any) => {
           let interim = '';
@@ -476,14 +464,14 @@ function MeetingDetail({ meeting, onBack }: { meeting: Meeting; onBack: () => vo
             if (event.results[i].isFinal) final += event.results[i][0].transcript;
             else interim += event.results[i][0].transcript;
           }
-          
-          const text = final || interim;
+
+          const text = (final || interim).trim();
           if (!text) return;
-          
-          const me = useAppStore.getState().currentUser?.name || 'Speaker';
+
+          const me = useAppStore.getState().currentUser?.name || meeting.organizer || 'Speaker';
           const now = new Date();
-          const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
-          
+          const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+
           setTranscript(prev => {
             const existingIdx = prev.findIndex(t => t.id === currentLineId);
             const newLine = { id: currentLineId, time: timeStr, speaker: me, text };
@@ -494,71 +482,197 @@ function MeetingDetail({ meeting, onBack }: { meeting: Meeting; onBack: () => vo
             }
             return [...prev, newLine];
           });
-          
+
           if (final) {
             currentLineId = `line-${Date.now()}`;
           }
         };
-        
+
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         recognition.onerror = (e: any) => {
-          console.error('Speech recognition error', e.error);
+          console.warn('Speech recognition warning/status:', e.error);
+          if (e.error === 'no-speech' || e.error === 'aborted') {
+            return;
+          }
           if (e.error === 'not-allowed') {
-            toast.error('Izin mikrofon untuk transkripsi ditolak.');
+            setIsSpeechSupported(false);
+            setIsSpeechActive(false);
+            toast.error('Izin mikrofon/pengenalan suara diblokir browser.');
+          } else if (e.error === 'audio-capture') {
+            console.warn('Microphone in exclusive mode on this mobile device.');
           }
         };
 
-        // Auto restart if continuous listening stops due to silence
         recognition.onend = () => {
           if (isRecordingRef.current) {
-            try {
-              recognition.start();
-            } catch (err) {
-              console.error('Failed to restart recognition', err);
-            }
+            if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
+            restartTimerRef.current = setTimeout(() => {
+              if (isRecordingRef.current) {
+                speechEngineRef.current();
+              }
+            }, 350);
+          } else {
+            setIsSpeechActive(false);
           }
         };
 
-        try {
-          recognition.start();
-          recognitionRef.current = recognition;
-        } catch (err) {
-          console.error('Failed to start recognition', err);
+        recognition.start();
+        recognitionRef.current = recognition;
+        setIsSpeechActive(true);
+        setIsSpeechSupported(true);
+      } catch (err) {
+        console.warn('SpeechRecognition startup error, retrying:', err);
+        if (isRecordingRef.current) {
+          if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
+          restartTimerRef.current = setTimeout(() => {
+            if (isRecordingRef.current) speechEngineRef.current();
+          }, 600);
         }
-      } else {
-        toast.error('Browser ini tidak mendukung transkripsi otomatis (Speech API). Gunakan Chrome/Edge.');
       }
+    };
+  }, [meeting.organizer]);
 
+  const initSpeechRecognition = useCallback(() => {
+    speechEngineRef.current();
+  }, []);
+
+  const startRecording = async () => {
+    try {
+      isRecordingRef.current = true;
+      setRecordingState('recording');
+      await updateMeeting(meeting.id, { status: 'ongoing' });
+
+      // Start Speech Recognition first for better hardware access on mobile
+      initSpeechRecognition();
+
+      // Start MediaRecorder in parallel
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const recorder = new MediaRecorder(stream);
+        const chunks: BlobPart[] = [];
+        recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+        recorder.onstop = async () => {
+          const actualMimeType = recorder.mimeType || 'audio/webm';
+          const safeType = actualMimeType.startsWith('audio/') ? actualMimeType : 'audio/webm';
+          const blob = new Blob(chunks, { type: safeType });
+          const orgId = useAppStore.getState().currentUser?.organizationId || useAppStore.getState().currentOrgId;
+          try {
+            const storageRef = ref(storage, `orgs/${orgId}/recordings/meeting_${meeting.id}.webm`);
+            await uploadBytes(storageRef, blob, { contentType: blob.type });
+            const url = await getDownloadURL(storageRef);
+            await updateMeeting(meeting.id, { recordingUrl: url, status: 'completed' });
+            toast.success('Rekaman tersimpan!');
+          } catch (e) {
+            console.error('Upload failed', e);
+            toast.error('Gagal mengunggah rekaman. Namun transkrip tetap disimpan.');
+          }
+
+          // Save transcript
+          const finalTranscript = transcriptRef.current;
+          await updateMeeting(meeting.id, { transcript: finalTranscript });
+        };
+        setMediaRecorder(recorder);
+        recorder.start();
+      } catch (err) {
+        console.warn('Microphone stream error for audio file, continuing with speech engine:', err);
+      }
     } catch (e) {
-      console.error('Microphone access denied', e);
-      toast.error('Akses mikrofon diperlukan untuk merekam dan transkripsi.');
+      console.error('Recording initialization error', e);
+      toast.error('Gagal memulai rekaman.');
     }
   };
 
   const stopRecording = () => {
     isRecordingRef.current = false;
+    if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
     if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-      mediaRecorder.stop();
-      mediaRecorder.stream.getTracks().forEach(t => t.stop());
+      try {
+        mediaRecorder.stop();
+        mediaRecorder.stream.getTracks().forEach(t => t.stop());
+      } catch { /* ignore */ }
     }
     if (recognitionRef.current) {
-      recognitionRef.current.stop();
+      try { recognitionRef.current.abort(); } catch { /* ignore */ }
     }
+    setIsSpeechActive(false);
     setRecordingState('finished');
   };
 
   const pauseRecording = () => {
     isRecordingRef.current = false;
+    if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
     if (mediaRecorder?.state === 'recording') mediaRecorder.pause();
-    if (recognitionRef.current) recognitionRef.current.stop();
+    if (recognitionRef.current) {
+      try { recognitionRef.current.abort(); } catch { /* ignore */ }
+    }
+    setIsSpeechActive(false);
     setRecordingState('paused');
   };
 
   const resumeRecording = () => {
     isRecordingRef.current = true;
     if (mediaRecorder?.state === 'paused') mediaRecorder.resume();
-    if (recognitionRef.current) recognitionRef.current.start();
+    initSpeechRecognition();
     setRecordingState('recording');
+  };
+
+  const handleAddManualTranscript = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!manualText.trim()) return;
+
+    const now = new Date();
+    const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+    const newLine: TranscriptLine = {
+      id: `line-${Date.now()}`,
+      time: timeStr,
+      speaker: manualSpeaker.trim() || 'Speaker',
+      text: manualText.trim(),
+    };
+
+    const updated = [...transcript, newLine];
+    setTranscript(updated);
+    await updateMeeting(meeting.id, { transcript: updated });
+    setManualText('');
+    toast.success('Catatan ditambahkan ke transkrip');
+  };
+
+  const handleGenerateFromAgenda = async () => {
+    const me = useAppStore.getState().currentUser?.name || meeting.organizer || 'Speaker';
+    const newLines: TranscriptLine[] = [];
+    const baseTime = new Date();
+
+    if (meeting.agenda && meeting.agenda.length > 0) {
+      meeting.agenda.forEach((ag, idx) => {
+        const lineTime = new Date(baseTime.getTime() + idx * 5 * 60000);
+        const timeStr = `${lineTime.getHours().toString().padStart(2, '0')}:${lineTime.getMinutes().toString().padStart(2, '0')}:00`;
+        newLines.push({
+          id: `line-agenda-${idx}-${Date.now()}`,
+          time: timeStr,
+          speaker: meeting.participants[idx % Math.max(1, meeting.participants.length)] || me,
+          text: `Membahas agenda "${ag.title}": ${ag.description || 'Penyampaian pokok bahasan dan kesepakatan langkah bersama.'}`,
+        });
+      });
+    } else {
+      newLines.push(
+        {
+          id: `line-draft-1-${Date.now()}`,
+          time: '09:05:00',
+          speaker: meeting.organizer || me,
+          text: `Pembukaan rapat "${meeting.title}" dan pemaparan latar belakang kebutuhan.`,
+        },
+        {
+          id: `line-draft-2-${Date.now()}`,
+          time: '09:20:00',
+          speaker: me,
+          text: 'Penyampaian rencana pelaksanaan, evaluasi hambatan, dan alokasi tugas tindak lanjut.',
+        }
+      );
+    }
+
+    const updated = [...transcript, ...newLines];
+    setTranscript(updated);
+    await updateMeeting(meeting.id, { transcript: updated });
+    toast.success('Draf transkrip dari agenda berhasil dibuat!');
   };
 
   const handleGenerateSummary = async () => {
@@ -834,12 +948,51 @@ function MeetingDetail({ meeting, onBack }: { meeting: Meeting; onBack: () => vo
                   </div>
                 )}
 
+                {/* Live Speech Recognition Status Banner */}
+                {recordingState === 'recording' && (
+                  <div className="mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-indigo-50/70 border border-indigo-200 rounded-2xl p-3.5 text-xs text-indigo-900 shadow-sm">
+                    <div className="flex items-center gap-2.5">
+                      <span className="relative flex h-3 w-3 flex-shrink-0">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
+                      </span>
+                      <span className="font-medium">
+                        {isSpeechActive
+                          ? 'Transkripsi suara otomatis aktif. Bicaralah ke mikrofon.'
+                          : isSpeechSupported
+                          ? 'Menghubungkan ke pengenalan suara browser...'
+                          : 'Pengenalan suara otomatis dibatasi di browser ini. Anda dapat mencatat manual di bawah.'}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleGenerateFromAgenda}
+                      className="self-start sm:self-auto inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-indigo-200 hover:border-indigo-300 text-indigo-700 hover:text-indigo-900 font-semibold rounded-xl shadow-xs transition-all text-xs"
+                    >
+                      <Sparkles size={13} className="text-indigo-600" /> + Draf dari Agenda
+                    </button>
+                  </div>
+                )}
+
                 {/* Transcript lines */}
                 {transcript.length === 0 ? (
-                  <div className="text-center py-16 text-slate-400">
-                    <Mic size={36} className="mx-auto mb-3 text-slate-200" />
-                    <p className="font-medium text-slate-600">Belum ada transkrip</p>
-                    <p className="text-sm mt-1">Mulai rekaman untuk menghasilkan transkrip secara otomatis.</p>
+                  <div className="text-center py-12 text-slate-400 bg-slate-50/60 rounded-3xl border border-dashed border-slate-200 p-6 mb-6">
+                    <div className="w-14 h-14 rounded-2xl bg-white shadow-sm border border-slate-100 flex items-center justify-center mx-auto mb-3 text-slate-300">
+                      <Mic size={28} />
+                    </div>
+                    <p className="font-bold text-slate-700 text-base">Belum Ada Transkrip</p>
+                    <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto leading-relaxed">
+                      Mulai rekaman untuk transkripsi otomatis, gunakan tombol <strong className="text-indigo-600 font-semibold">Draf dari Agenda</strong>, atau ketik catatan hasil rapat secara langsung di bawah.
+                    </p>
+                    <div className="mt-4 flex flex-wrap gap-2.5 justify-center">
+                      <button
+                        type="button"
+                        onClick={handleGenerateFromAgenda}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-white border border-slate-200 hover:border-indigo-400 text-slate-700 hover:text-indigo-700 text-xs font-bold rounded-xl transition-all shadow-sm"
+                      >
+                        <Sparkles size={14} className="text-indigo-500" /> Buat Draf dari Agenda
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <div className="space-y-5">
@@ -897,6 +1050,48 @@ function MeetingDetail({ meeting, onBack }: { meeting: Meeting; onBack: () => vo
                     )}
                   </div>
                 )}
+
+                {/* Manual Transcript Input Form */}
+                <div className="mt-8 pt-5 border-t border-slate-100">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                      <Plus size={13} className="text-primary-500" /> Tambah Catatan Transkrip Manual
+                    </label>
+                    {transcript.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleGenerateFromAgenda}
+                        className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+                      >
+                        <Sparkles size={12} /> Isi Tambahan dari Agenda
+                      </button>
+                    )}
+                  </div>
+                  <form onSubmit={handleAddManualTranscript} className="flex flex-col sm:flex-row gap-2">
+                    <input
+                      type="text"
+                      value={manualSpeaker}
+                      onChange={e => setManualSpeaker(e.target.value)}
+                      placeholder="Nama Pembicara"
+                      className="w-full sm:w-40 text-xs font-bold px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all text-slate-800"
+                    />
+                    <div className="flex-1 flex gap-2">
+                      <input
+                        type="text"
+                        value={manualText}
+                        onChange={e => setManualText(e.target.value)}
+                        placeholder="Ketik poin pembicaraan atau catatan rapat..."
+                        className="flex-1 text-sm px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all text-slate-800"
+                      />
+                      <button
+                        type="submit"
+                        className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 flex-shrink-0"
+                      >
+                        <Plus size={14} /> Tambah
+                      </button>
+                    </div>
+                  </form>
+                </div>
               </div>
             )}
 
