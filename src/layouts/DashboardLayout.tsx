@@ -433,13 +433,20 @@ export default function DashboardLayout() {
               </div>
 
               {/* Stats */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
                 <StatCard
                   title="Tugas Aktif"
                   value={activeTasksCount}
                   icon={<CheckSquare size={20} className="text-primary-500" />}
                   color="primary"
                   onClick={() => setActiveTab('tasks')}
+                />
+                <StatCard
+                  title="Agenda"
+                  value={unfinishedAgendas.length}
+                  icon={<ListTodo size={20} className="text-purple-500" />}
+                  color="purple"
+                  onClick={() => setActiveTab('agenda')}
                 />
                 <StatCard
                   title="Rapat Terjadwal"
@@ -461,6 +468,8 @@ export default function DashboardLayout() {
                   icon={<TrendingUp size={20} className="text-amber-500" />}
                   color="amber"
                   onClick={() => setActiveTab('tasks')}
+                  className="col-span-2 sm:col-span-1"
+                  horizontalOnMobile
                 />
               </div>
 
@@ -789,28 +798,59 @@ function NavItem({ icon, label, active, collapsed, onClick, badge }: {
   );
 }
 
-function StatCard({ title, value, icon, color, onClick }: {
+function StatCard({
+  title,
+  value,
+  icon,
+  color,
+  onClick,
+  className,
+  horizontalOnMobile,
+}: {
   title: string;
   value: number | string;
   icon: React.ReactNode;
-  color: 'primary' | 'indigo' | 'emerald' | 'amber';
+  color: 'primary' | 'indigo' | 'emerald' | 'amber' | 'purple' | 'rose';
   onClick: () => void;
+  className?: string;
+  horizontalOnMobile?: boolean;
 }) {
   const bg = {
     primary: 'bg-primary-50 border-primary-100',
     indigo: 'bg-indigo-50 border-indigo-100',
     emerald: 'bg-emerald-50 border-emerald-100',
     amber: 'bg-amber-50 border-amber-100',
+    purple: 'bg-purple-50 border-purple-100',
+    rose: 'bg-rose-50 border-rose-100',
   }[color];
 
   return (
-    <button onClick={onClick} className={cn(
-      'text-left p-5 rounded-2xl border shadow-sm hover:shadow-md transition-all group cursor-pointer w-full',
-      bg
-    )}>
-      <div className="mb-3">{icon}</div>
-      <p className="text-sm font-medium text-slate-600">{title}</p>
-      <h4 className="text-2xl md:text-3xl font-bold text-slate-800 mt-1">{value}</h4>
+    <button
+      onClick={onClick}
+      className={cn(
+        'text-left p-4 md:p-5 rounded-2xl border shadow-xs hover:shadow-md transition-all group cursor-pointer w-full',
+        bg,
+        className
+      )}
+    >
+      {horizontalOnMobile ? (
+        <div className="flex items-center justify-between sm:block">
+          <div className="flex items-center gap-3 sm:block">
+            <div className="mb-0 sm:mb-3">{icon}</div>
+            <div>
+              <p className="text-xs md:text-sm font-medium text-slate-600">{title}</p>
+              <span className="text-[11px] text-slate-400 sm:hidden">Tingkat penyelesaian tugas</span>
+            </div>
+          </div>
+          <h4 className="text-2xl md:text-3xl font-bold text-slate-800 sm:mt-1">{value}</h4>
+        </div>
+      ) : (
+        <>
+          <div className="mb-2.5 md:mb-3">{icon}</div>
+          <p className="text-xs md:text-sm font-medium text-slate-600 truncate">{title}</p>
+          <h4 className="text-2xl md:text-3xl font-bold text-slate-800 mt-1">{value}</h4>
+        </>
+      )}
     </button>
   );
 }
