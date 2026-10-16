@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -118,6 +118,121 @@ export default function DashboardLayout() {
     if (h < 18) return 'Selamat Sore';
     return 'Selamat Malam';
   };
+
+  // Unfinished Agendas (Meetings, Events, and Pending Tasks)
+  const unfinishedAgendas = useMemo(() => {
+    const items: Array<{
+      id: string;
+      type: 'meeting' | 'task' | 'event';
+      title: string;
+      dateStr: string;
+      dateObj: Date;
+      time?: string;
+      badge: { text: string; color: string };
+      status?: string;
+      detail?: string;
+    }> = [];
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // 1. Pending / Ongoing Meetings
+    meetings.forEach(m => {
+      if (m.status === 'completed' || m.status === 'cancelled') return;
+      const dateString = m.date.includes('T') ? m.date : `${m.date}T00:00:00`;
+      const parsed = new Date(dateString);
+      const dateObj = !isNaN(parsed.getTime()) ? parsed : new Date();
+      const itemDate = new Date(dateObj);
+      itemDate.setHours(0, 0, 0, 0);
+
+      const diffDays = Math.ceil((itemDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      let badge = { text: `${diffDays} Hari Lagi`, color: 'bg-indigo-100 text-indigo-700' };
+      if (diffDays === 0) badge = { text: 'Hari Ini', color: 'bg-rose-100 text-rose-700' };
+      else if (diffDays === 1) badge = { text: 'Besok', color: 'bg-amber-100 text-amber-700' };
+      else if (diffDays < 0) badge = { text: 'Terlewat', color: 'bg-red-100 text-red-700' };
+
+      items.push({
+        id: `m-${m.id}`,
+        type: 'meeting',
+        title: m.title,
+        dateStr: m.date,
+        dateObj,
+        time: m.startTime ? `${m.startTime} – ${m.endTime || ''}` : undefined,
+        badge,
+        status: m.status,
+        detail: m.location || m.onlineMeetingUrl || 'Rapat Rencana',
+      });
+    });
+
+    // 2. Events (from Calendar)
+    events.forEach(e => {
+      let dateObj = new Date();
+      if (typeof e.date === 'string') {
+        const parsed = new Date(e.date.includes('T') ? e.date : `${e.date}T00:00:00`);
+        if (!isNaN(parsed.getTime())) dateObj = parsed;
+      }
+      const itemDate = new Date(dateObj);
+      itemDate.setHours(0, 0, 0, 0);
+
+      const diffDays = Math.ceil((itemDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      let badge = { text: `${diffDays} Hari Lagi`, color: 'bg-emerald-100 text-emerald-700' };
+      if (diffDays === 0) badge = { text: 'Hari Ini', color: 'bg-rose-100 text-rose-700' };
+      else if (diffDays === 1) badge = { text: 'Besok', color: 'bg-amber-100 text-amber-700' };
+      else if (diffDays < 0) badge = { text: 'Terlewat', color: 'bg-slate-100 text-slate-600' };
+
+      items.push({
+        id: `e-${e.id}`,
+        type: 'event',
+        title: e.title,
+        dateStr: typeof e.date === 'string' ? e.date : '',
+        dateObj,
+        time: e.time,
+        badge,
+        detail: e.location || e.personInCharge || 'Acara Organisasi',
+      });
+    });
+
+    // 3. Incomplete Tasks with Due Dates
+    tasks.forEach(t => {
+      if (t.status === 'completed' || !t.dueDate || t.dueDate === 'No date') return;
+      const due = (t.dueDate || '').trim().toLowerCase();
+      let dateObj: Date;
+      if (due === 'today' || due === 'hari ini') {
+        dateObj = new Date();
+      } else if (due === 'tomorrow' || due === 'besok') {
+        dateObj = new Date();
+        dateObj.setDate(dateObj.getDate() + 1);
+      } else if (due === 'lusa') {
+        dateObj = new Date();
+        dateObj.setDate(dateObj.getDate() + 2);
+      } else {
+        const parsed = new Date(t.dueDate.includes('T') ? t.dueDate : `${t.dueDate}T00:00:00`);
+        if (isNaN(parsed.getTime())) return;
+        dateObj = parsed;
+      }
+
+      const itemDate = new Date(dateObj);
+      itemDate.setHours(0, 0, 0, 0);
+      const diffDays = Math.ceil((itemDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      let badge = { text: `${diffDays} Hari Lagi`, color: 'bg-blue-100 text-blue-700' };
+      if (diffDays === 0) badge = { text: 'Hari Ini', color: 'bg-rose-100 text-rose-700' };
+      else if (diffDays === 1) badge = { text: 'Besok', color: 'bg-amber-100 text-amber-700' };
+      else if (diffDays < 0) badge = { text: 'Terlewat', color: 'bg-red-100 text-red-700' };
+
+      items.push({
+        id: `t-${t.id}`,
+        type: 'task',
+        title: t.title,
+        dateStr: t.dueDate,
+        dateObj,
+        badge,
+        status: t.status,
+        detail: `Tugas · PJ: ${t.assignee || 'Tim'}`,
+      });
+    });
+
+    return items.sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime());
+  }, [meetings, events, tasks]);
 
   // Subscriptions are already started by App.tsx via setCurrentOrgId.
   // No duplicate setupSubscriptions call needed here.
@@ -296,8 +411,8 @@ export default function DashboardLayout() {
 
         {/* Content Area */}
         {activeTab === 'dashboard' && (
-          <div className="flex-1 overflow-y-auto p-6 md:p-8 bg-slate-50">
-            <div className="max-w-6xl mx-auto space-y-8">
+          <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50 pb-24 md:pb-8 custom-scrollbar">
+            <div className="max-w-6xl mx-auto space-y-6 md:space-y-8">
 
               {/* Greeting */}
               <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
@@ -318,7 +433,7 @@ export default function DashboardLayout() {
               </div>
 
               {/* Stats */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
                 <StatCard
                   title="Tugas Aktif"
                   value={activeTasksCount}
@@ -347,6 +462,82 @@ export default function DashboardLayout() {
                   color="amber"
                   onClick={() => setActiveTab('tasks')}
                 />
+              </div>
+
+              {/* ─── Agenda Belum Selesai (Baru untuk Dashboard) ─── */}
+              <div className="bg-white border border-slate-200 rounded-2xl p-4 md:p-6 shadow-xs">
+                <div className="flex justify-between items-center mb-3 md:mb-4">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-amber-50 border border-amber-200/70 flex items-center justify-center text-amber-600 flex-shrink-0">
+                      <ListTodo size={17} />
+                    </div>
+                    <div>
+                      <h3 className="text-base md:text-lg font-bold text-slate-800 leading-tight">
+                        Agenda Belum Selesai
+                      </h3>
+                      <p className="text-[11px] md:text-xs text-slate-500 mt-0.5">
+                        Jadwal rapat mendatang, kegiatan acara, dan tugas prioritas
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab('agenda')}
+                    className="text-xs md:text-sm font-semibold text-primary-600 hover:text-primary-700 flex items-center gap-1 group flex-shrink-0"
+                  >
+                    Lihat Semua <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
+                  </button>
+                </div>
+
+                {unfinishedAgendas.length === 0 ? (
+                  <div className="py-6 text-center text-slate-400 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+                    <Sparkles size={24} className="mx-auto mb-1.5 text-emerald-500" />
+                    <p className="font-bold text-slate-700 text-xs md:text-sm">Semua agenda telah selesai! 🎉</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">Tidak ada agenda atau rapat tertunda saat ini.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 md:gap-3">
+                    {unfinishedAgendas.slice(0, 6).map(item => (
+                      <div
+                        key={item.id}
+                        onClick={() => {
+                          if (item.type === 'meeting') setActiveTab('meetings');
+                          else if (item.type === 'task') setActiveTab('tasks');
+                          else setActiveTab('agenda');
+                        }}
+                        className="p-3 md:p-3.5 rounded-xl border border-slate-200/90 bg-slate-50/60 hover:bg-white hover:border-primary-300 hover:shadow-xs transition-all cursor-pointer group flex flex-col justify-between"
+                      >
+                        <div>
+                          <div className="flex items-center justify-between gap-1.5 mb-1.5">
+                            <span className={cn('text-[9px] md:text-[10px] font-bold px-2 py-0.5 rounded-full uppercase', item.badge.color)}>
+                              {item.badge.text}
+                            </span>
+                            <span className="text-[10px] md:text-[11px] text-slate-400 font-semibold flex items-center gap-1">
+                              {item.type === 'meeting' && <CalendarDays size={11} className="text-rose-500" />}
+                              {item.type === 'event' && <Calendar size={11} className="text-emerald-500" />}
+                              {item.type === 'task' && <CheckSquare size={11} className="text-indigo-500" />}
+                              {item.type === 'meeting' ? 'Rapat' : item.type === 'event' ? 'Acara' : 'Tugas'}
+                            </span>
+                          </div>
+                          <h4 className="font-semibold text-slate-800 text-xs md:text-sm line-clamp-1 group-hover:text-primary-600 transition-colors">
+                            {item.title}
+                          </h4>
+                          <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">
+                            {item.detail}
+                          </p>
+                        </div>
+
+                        <div className="mt-2.5 pt-2 border-t border-slate-200/60 flex items-center justify-between text-[10px] md:text-[11px] text-slate-500">
+                          <span className="flex items-center gap-1 truncate max-w-[80%]">
+                            <Clock size={11} className="flex-shrink-0" /> {item.time || item.dateStr}
+                          </span>
+                          <span className="text-primary-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity">
+                            Buka →
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -474,15 +665,93 @@ export default function DashboardLayout() {
           </div>
         )}
 
-        {activeTab === 'tasks' && <KanbanBoard />}
-        {activeTab === 'meetings' && <MeetingRoom />}
-        {activeTab === 'team' && <TeamManagement />}
-        {activeTab === 'projects' && <ProjectsView />}
-        {activeTab === 'decisions' && <DecisionLog onNavigate={setActiveTab} />}
-        {activeTab === 'calendar' && <CalendarView />}
-        {activeTab === 'agenda' && <AgendaView />}
-        {activeTab === 'documents' && <DocumentsView />}
-        {activeTab === 'settings' && <SettingsComponent />}
+        {activeTab === 'tasks' && <div className="flex-1 flex flex-col min-h-0 pb-16 md:pb-0"><KanbanBoard /></div>}
+        {activeTab === 'meetings' && <div className="flex-1 flex flex-col min-h-0 pb-16 md:pb-0"><MeetingRoom /></div>}
+        {activeTab === 'team' && <div className="flex-1 flex flex-col min-h-0 pb-16 md:pb-0"><TeamManagement /></div>}
+        {activeTab === 'projects' && <div className="flex-1 flex flex-col min-h-0 pb-16 md:pb-0"><ProjectsView /></div>}
+        {activeTab === 'decisions' && <div className="flex-1 flex flex-col min-h-0 pb-16 md:pb-0"><DecisionLog onNavigate={setActiveTab} /></div>}
+        {activeTab === 'calendar' && <div className="flex-1 flex flex-col min-h-0 pb-16 md:pb-0"><CalendarView /></div>}
+        {activeTab === 'agenda' && <div className="flex-1 flex flex-col min-h-0 pb-16 md:pb-0"><AgendaView /></div>}
+        {activeTab === 'documents' && <div className="flex-1 flex flex-col min-h-0 pb-16 md:pb-0"><DocumentsView /></div>}
+        {activeTab === 'settings' && <div className="flex-1 flex flex-col min-h-0 pb-16 md:pb-0"><SettingsComponent /></div>}
+
+        {/* ─── Mobile Bottom Navigation Bar (md:hidden) ─── */}
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] px-2 py-1.5 flex items-center justify-around safe-area-bottom">
+          <button
+            onClick={() => setActiveTab('dashboard')}
+            className={cn(
+              'flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all relative',
+              activeTab === 'dashboard' ? 'text-primary-600 font-bold' : 'text-slate-400 hover:text-slate-600 font-medium'
+            )}
+          >
+            <LayoutDashboard size={20} className={activeTab === 'dashboard' ? 'stroke-[2.5]' : 'stroke-2'} />
+            <span className="text-[10px] mt-0.5">Beranda</span>
+            {activeTab === 'dashboard' && <span className="absolute -bottom-1 w-1 h-1 rounded-full bg-primary-600" />}
+          </button>
+
+          <button
+            onClick={() => setActiveTab('tasks')}
+            className={cn(
+              'flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all relative',
+              activeTab === 'tasks' ? 'text-primary-600 font-bold' : 'text-slate-400 hover:text-slate-600 font-medium'
+            )}
+          >
+            <div className="relative">
+              <CheckSquare size={20} className={activeTab === 'tasks' ? 'stroke-[2.5]' : 'stroke-2'} />
+              {activeTasksCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500" />
+              )}
+            </div>
+            <span className="text-[10px] mt-0.5">Tugas</span>
+            {activeTab === 'tasks' && <span className="absolute -bottom-1 w-1 h-1 rounded-full bg-primary-600" />}
+          </button>
+
+          <button
+            onClick={() => setActiveTab('meetings')}
+            className={cn(
+              'flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all relative',
+              activeTab === 'meetings' ? 'text-primary-600 font-bold' : 'text-slate-400 hover:text-slate-600 font-medium'
+            )}
+          >
+            <div className="relative">
+              <CalendarDays size={20} className={activeTab === 'meetings' ? 'stroke-[2.5]' : 'stroke-2'} />
+              {upcomingMeetingsCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+              )}
+            </div>
+            <span className="text-[10px] mt-0.5">Rapat</span>
+            {activeTab === 'meetings' && <span className="absolute -bottom-1 w-1 h-1 rounded-full bg-primary-600" />}
+          </button>
+
+          <button
+            onClick={() => setActiveTab('agenda')}
+            className={cn(
+              'flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all relative',
+              activeTab === 'agenda' ? 'text-primary-600 font-bold' : 'text-slate-400 hover:text-slate-600 font-medium'
+            )}
+          >
+            <div className="relative">
+              <ListTodo size={20} className={activeTab === 'agenda' ? 'stroke-[2.5]' : 'stroke-2'} />
+              {unfinishedAgendas.length > 0 && (
+                <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-500" />
+              )}
+            </div>
+            <span className="text-[10px] mt-0.5">Agenda</span>
+            {activeTab === 'agenda' && <span className="absolute -bottom-1 w-1 h-1 rounded-full bg-primary-600" />}
+          </button>
+
+          <button
+            onClick={() => setActiveTab('projects')}
+            className={cn(
+              'flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all relative',
+              activeTab === 'projects' ? 'text-primary-600 font-bold' : 'text-slate-400 hover:text-slate-600 font-medium'
+            )}
+          >
+            <FolderKanban size={20} className={activeTab === 'projects' ? 'stroke-[2.5]' : 'stroke-2'} />
+            <span className="text-[10px] mt-0.5">Proyek</span>
+            {activeTab === 'projects' && <span className="absolute -bottom-1 w-1 h-1 rounded-full bg-primary-600" />}
+          </button>
+        </nav>
       </main>
     </div>
   );
