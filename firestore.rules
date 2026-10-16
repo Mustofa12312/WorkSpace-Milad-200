@@ -133,6 +133,13 @@ service cloud.firestore {
       allow delete: if inMyOrg(resource.data) && canEdit();
     }
 
+    match /decisions/{id} {
+      allow read: if inMyOrg(resource.data);
+      allow create: if inMyOrg(request.resource.data) && canEdit();
+      allow update: if inMyOrg(resource.data) && orgUnchanged() && canEdit();
+      allow delete: if inMyOrg(resource.data) && canEdit();
+    }
+
     match /invitations/{id} {
       allow get: if true; // Anyone with the link can fetch the invitation
       allow list: if inMyOrg(resource.data) && isManager();
