@@ -22,7 +22,7 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }: CommandP
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
-  const { tasks, projects, meetings, team, setSearchFocus } = useAppStore();
+  const { tasks, projects, meetings, team, documents, setSearchFocus } = useAppStore();
 
   useEffect(() => {
     if (isOpen) {
@@ -72,6 +72,13 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }: CommandP
         id: m.id, type: 'meeting', title: m.title || 'Untitled Meeting', subtitle: `Rapat · ${m.date || '-'} · ${m.status || 'scheduled'}`,
         icon: <CalendarDays size={15} className="text-indigo-500" />,
         onSelect: () => { setSearchFocus({ type: 'meeting', id: m.id }); onNavigate('meetings'); onClose(); }
+      });
+    });
+    documents.filter(d => (d.name || '').toLowerCase().includes(q) || (d.owner || '').toLowerCase().includes(q)).slice(0, 3).forEach(d => {
+      results.push({
+        id: d.id, type: 'action', title: d.name || 'Untitled Document', subtitle: `Dokumen · ${d.type?.toUpperCase() || 'FILE'} · ${d.size || ''}`,
+        icon: <FileText size={15} className="text-blue-500" />,
+        onSelect: () => { onNavigate('documents'); onClose(); }
       });
     });
     team.filter(u => (u.name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q)).slice(0, 3).forEach(u => {

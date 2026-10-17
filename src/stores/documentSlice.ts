@@ -2,14 +2,15 @@ import type { StateCreator } from 'zustand';
 import type { Document } from '../types';
 import type { AppState } from '../store/useAppStore';
 import { db } from '../lib/firebase';
-import { doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import { logAuditAction } from '../lib/audit';
 
 export interface DocumentSlice {
   documents: Document[];
   addDocument: (doc: Document) => Promise<void>;
-  deleteDocument: (docId: string) => void;
+  updateDocument: (docId: string, updates: Partial<Document>) => Promise<void>;
+  deleteDocument: (docId: string) => Promise<void>;
 }
 
 export const createDocumentSlice: StateCreator<AppState, [], [], DocumentSlice> = (_set, get) => ({
@@ -20,11 +21,27 @@ export const createDocumentSlice: StateCreator<AppState, [], [], DocumentSlice> 
     const orgId = user?.organizationId || get().currentOrgId;
     try { 
       await setDoc(doc(db, 'documents', docInfo.id), { ...docInfo, organizationId: orgId }); 
-      toast.success('Dokumen berhasil diunggah');
+      toast.success('Dokumen berhasil disimpan');
       if (user) logAuditAction(orgId, user, 'CREATE', 'Document', docInfo.id, `Uploaded document "${docInfo.name}"`);
-    } catch (err) { const e = err as Error; 
+    } catch (err) { 
+      const e = err as Error; 
       console.error('Firestore error:', e);
       toast.error(e.message || 'Gagal menyimpan dokumen');
+      throw e;
+    }
+  },
+
+  updateDocument: async (docId, updates) => {
+    const user = get().currentUser;
+    const orgId = user?.organizationId || get().currentOrgId;
+    try {
+      await updateDoc(doc(db, 'documents', docId), updates as Record<string, unknown>);
+      toast.success('Dokumen berhasil diperbarui');
+      if (user) logAuditAction(orgId, user, 'UPDATE', 'Document', docId, `Updated document "${updates.name || docId}"`);
+    } catch (err) {
+      const e = err as Error;
+      console.error('Firestore error:', e);
+      toast.error(e.message || 'Gagal memperbarui dokumen');
       throw e;
     }
   },
@@ -36,7 +53,8 @@ export const createDocumentSlice: StateCreator<AppState, [], [], DocumentSlice> 
       await deleteDoc(doc(db, 'documents', docId)); 
       toast.success('Dokumen dihapus');
       if (user) logAuditAction(orgId, user, 'DELETE', 'Document', docId, `Deleted document`);
-    } catch (err) { const e = err as Error; 
+    } catch (err) { 
+      const e = err as Error; 
       console.error('Firestore error:', e);
       toast.error(e.message || 'Gagal menghapus dokumen');
       throw e;
