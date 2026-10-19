@@ -31,20 +31,23 @@ const makeTask = (overrides: Partial<Task>): Task => ({
 
 const addTask = vi.fn();
 const updateTaskStatus = vi.fn();
+const updateTask = vi.fn();
 
 beforeEach(() => {
   addTask.mockReset();
   updateTaskStatus.mockReset();
+  updateTask.mockReset();
   useAppStore.setState({
     tasks: [
-      makeTask({ id: 'a', title: 'Book venue', status: 'backlog' }),
-      makeTask({ id: 'b', title: 'Write proposal', status: 'in_progress' }),
+      makeTask({ id: 'a', title: 'Book venue', status: 'backlog', dueDate: 'Oct 21' }),
+      makeTask({ id: 'b', title: 'Write proposal', status: 'in_progress', dueDate: 'Oct 17' }),
     ],
     projects: [
       { id: 'p1', name: 'Test Project', status: 'Planning', progress: 0, members: 1, dueDate: 'No date', color: 'bg-blue-500', organizationId: 'default-org-1' }
     ],
     addTask,
     updateTaskStatus,
+    updateTask,
   });
 });
 
@@ -82,5 +85,31 @@ describe('KanbanBoard', () => {
 
     expect(screen.getByText('Book venue')).toBeInTheDocument();
     expect(screen.queryByText('Write proposal')).not.toBeInTheDocument();
+  });
+
+  it('edits a task title, schedule, and time via the edit modal', async () => {
+    const user = userEvent.setup();
+    render(<KanbanBoard />);
+
+    // Click quick edit button on the card
+    const editButtons = screen.getAllByTitle('Edit Tugas & Jadwal');
+    await user.click(editButtons[0]);
+
+    expect(screen.getByText('Edit Tugas & Jadwal')).toBeInTheDocument();
+    const titleInput = screen.getByPlaceholderText('Judul tugas...');
+    expect(titleInput).toHaveValue('Book venue');
+
+    await user.clear(titleInput);
+    await user.type(titleInput, 'Book Grand Ballroom');
+
+    // Click save
+    await user.click(screen.getByRole('button', { name: 'Simpan Perubahan' }));
+
+    expect(updateTask).toHaveBeenCalledTimes(1);
+    expect(updateTask.mock.calls[0][0]).toBe('a');
+    expect(updateTask.mock.calls[0][1]).toMatchObject({
+      title: 'Book Grand Ballroom',
+    });
+    expect(screen.queryByText('Edit Tugas & Jadwal')).not.toBeInTheDocument();
   });
 });

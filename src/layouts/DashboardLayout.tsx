@@ -19,6 +19,7 @@ import DocumentsView from '../components/DocumentsView';
 import CommandPalette from '../components/CommandPalette';
 import DecisionLog from '../components/DecisionLog';
 import AgendaView from '../components/AgendaView';
+import { parseAnyDate, parseDueDateParts } from '../lib/dateUtils';
 import {
   LayoutDashboard,
   CalendarDays,
@@ -99,9 +100,8 @@ export default function DashboardLayout() {
   const overdueTasksCount = tasks.filter(t => {
     if (t.status === 'completed') return false;
     if (!t.dueDate || t.dueDate === 'No date') return false;
-    const dateString = t.dueDate.includes('T') ? t.dueDate : `${t.dueDate}T23:59:59`;
-    const parsed = new Date(dateString);
-    if (isNaN(parsed.getTime())) return false;
+    const parsed = parseAnyDate(t.dueDate);
+    if (!parsed) return false;
     return parsed < new Date();
   }).length;
   const upcomingMeetingsCount = meetings.filter(m => m.status === 'scheduled').length;
@@ -195,21 +195,8 @@ export default function DashboardLayout() {
     // 3. Incomplete Tasks with Due Dates
     tasks.forEach(t => {
       if (t.status === 'completed' || !t.dueDate || t.dueDate === 'No date') return;
-      const due = (t.dueDate || '').trim().toLowerCase();
-      let dateObj: Date;
-      if (due === 'today' || due === 'hari ini') {
-        dateObj = new Date();
-      } else if (due === 'tomorrow' || due === 'besok') {
-        dateObj = new Date();
-        dateObj.setDate(dateObj.getDate() + 1);
-      } else if (due === 'lusa') {
-        dateObj = new Date();
-        dateObj.setDate(dateObj.getDate() + 2);
-      } else {
-        const parsed = new Date(t.dueDate.includes('T') ? t.dueDate : `${t.dueDate}T00:00:00`);
-        if (isNaN(parsed.getTime())) return;
-        dateObj = parsed;
-      }
+      const dateObj = parseAnyDate(t.dueDate);
+      if (!dateObj) return;
 
       const itemDate = new Date(dateObj);
       itemDate.setHours(0, 0, 0, 0);
@@ -219,12 +206,15 @@ export default function DashboardLayout() {
       else if (diffDays === 1) badge = { text: 'Besok', color: 'bg-amber-100 text-amber-700' };
       else if (diffDays < 0) badge = { text: 'Terlewat', color: 'bg-red-100 text-red-700' };
 
+      const { time } = parseDueDateParts(t.dueDate);
+
       items.push({
         id: `t-${t.id}`,
         type: 'task',
         title: t.title,
         dateStr: t.dueDate,
         dateObj,
+        time: time || undefined,
         badge,
         status: t.status,
         detail: `Tugas · PJ: ${t.assignee || 'Tim'}`,

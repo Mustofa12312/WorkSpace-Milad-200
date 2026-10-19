@@ -6,6 +6,7 @@ import { id } from 'date-fns/locale';
 import { CalendarClock, CheckSquare, CalendarDays, Calendar as CalendarIcon, Clock, MapPin, User } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { parseAnyDate, parseDueDateParts } from '../lib/dateUtils';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -34,22 +35,10 @@ export default function AgendaView() {
     // Process Tasks
     tasks.forEach(t => {
       if (t.status === 'completed' || !t.dueDate || t.dueDate === 'No date') return;
-      let dateObj: Date;
-      const due = (t.dueDate || '').trim().toLowerCase();
-      if (due === 'today' || due === 'hari ini') {
-        dateObj = new Date();
-      } else if (due === 'tomorrow' || due === 'besok') {
-        dateObj = new Date();
-        dateObj.setDate(dateObj.getDate() + 1);
-      } else if (due === 'lusa') {
-        dateObj = new Date();
-        dateObj.setDate(dateObj.getDate() + 2);
-      } else {
-        const dateString = t.dueDate.includes('T') ? t.dueDate : `${t.dueDate}T00:00:00`;
-        const parsed = new Date(dateString);
-        if (isNaN(parsed.getTime())) return;
-        dateObj = parsed;
-      }
+      const dateObj = parseAnyDate(t.dueDate);
+      if (!dateObj) return;
+
+      const { time } = parseDueDateParts(t.dueDate);
       
       items.push({
         id: `task-${t.id}`,
@@ -57,6 +46,7 @@ export default function AgendaView() {
         title: t.title,
         dateStr: t.dueDate,
         dateObj,
+        timeStr: time || undefined,
         status: t.status,
         person: t.assignee,
         raw: t
