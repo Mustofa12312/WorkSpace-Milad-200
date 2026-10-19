@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Search, Plus, MoreHorizontal, FolderKanban, Users, Clock, X, CheckCircle2, Trash2, ChevronRight, AlertCircle } from 'lucide-react';
+import { Search, Plus, MoreHorizontal, FolderKanban, Users, Clock, X, CheckCircle2, Trash2, ChevronRight, AlertCircle, Pencil } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { parseAnyDate } from '../lib/dateUtils';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -16,6 +17,14 @@ export default function ProjectsView() {
   const [newProject, setNewProject] = useState({ name: '', status: 'Planning', dueDate: '', description: '' });
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [detailProject, setDetailProject] = useState<Project | null>(null);
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [editProjectForm, setEditProjectForm] = useState({
+    name: '',
+    description: '',
+    status: 'Planning',
+    dueDate: '',
+    color: 'bg-blue-500'
+  });
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -66,6 +75,55 @@ export default function ProjectsView() {
     
     setIsModalOpen(false);
     setNewProject({ name: '', status: 'Planning', dueDate: '', description: '' });
+  };
+
+  const handleOpenEditProject = (project: Project) => {
+    let parsedDate = '';
+    if (project.dueDate && project.dueDate !== 'TBD') {
+      const d = parseAnyDate(project.dueDate);
+      if (d) {
+        parsedDate = d.toISOString().split('T')[0];
+      }
+    }
+    setEditProjectForm({
+      name: project.name || '',
+      description: project.description || '',
+      status: project.status || 'Planning',
+      dueDate: parsedDate,
+      color: project.color || 'bg-blue-500'
+    });
+    setEditingProject(project);
+    setActiveMenuId(null);
+  };
+
+  const handleSaveEditProject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProject || !editProjectForm.name.trim()) return;
+
+    let formattedDate = editingProject.dueDate || 'TBD';
+    if (editProjectForm.dueDate) {
+      const d = new Date(editProjectForm.dueDate);
+      formattedDate = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    const updates = {
+      name: editProjectForm.name.trim(),
+      description: editProjectForm.description.trim(),
+      status: editProjectForm.status,
+      dueDate: formattedDate,
+      color: editProjectForm.color
+    };
+
+    await updateProject(editingProject.id, updates);
+
+    if (detailProject && detailProject.id === editingProject.id) {
+      setDetailProject({
+        ...detailProject,
+        ...updates
+      });
+    }
+
+    setEditingProject(null);
   };
 
   const handleDeleteProject = (projectId: string) => {
@@ -191,6 +249,13 @@ export default function ProjectsView() {
                             Lihat Detail
                           </button>
                           <button 
+                            onClick={() => handleOpenEditProject(project)}
+                            className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-2"
+                          >
+                            <Pencil size={14} className="text-slate-400" />
+                            Edit Proyek
+                          </button>
+                          <button 
                             onClick={() => { setConfirmDeleteId(project.id); setActiveMenuId(null); }}
                             className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2"
                           >
@@ -273,9 +338,19 @@ export default function ProjectsView() {
                   <div className="h-12 w-12 bg-white/20 rounded-xl flex items-center justify-center mb-3">
                     <FolderKanban size={24} />
                   </div>
-                  <button onClick={() => setDetailProject(null)} className="p-2 hover:bg-white/20 rounded-xl transition-colors">
-                    <X size={20} />
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button 
+                      onClick={() => handleOpenEditProject(detailProject)} 
+                      className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-xl transition-colors text-xs font-semibold flex items-center gap-1.5 text-white"
+                      title="Edit Proyek"
+                    >
+                      <Pencil size={14} />
+                      <span>Edit</span>
+                    </button>
+                    <button onClick={() => setDetailProject(null)} className="p-2 hover:bg-white/20 rounded-xl transition-colors">
+                      <X size={20} />
+                    </button>
+                  </div>
                 </div>
                 <h2 className="text-2xl font-bold">{detailProject.name}</h2>
                 {detailProject.description && <p className="text-white/80 text-sm mt-1">{detailProject.description}</p>}
@@ -430,6 +505,92 @@ export default function ProjectsView() {
               <div className="pt-4 flex gap-3 justify-end">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 text-slate-600 font-medium hover:bg-slate-100 rounded-xl transition-colors">Batal</button>
                 <button type="submit" className="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-xl transition-colors shadow-sm shadow-primary-500/30">Buat Proyek</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Project Modal */}
+      {editingProject && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-primary-50 text-primary-600 flex items-center justify-center">
+                  <Pencil size={18} />
+                </div>
+                <h3 className="text-xl font-bold text-slate-800">Edit Proyek</h3>
+              </div>
+              <button onClick={() => setEditingProject(null)} className="p-2 hover:bg-slate-100 rounded-xl text-slate-400 hover:text-slate-700 transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={handleSaveEditProject} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto custom-scrollbar">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Nama Proyek <span className="text-red-500">*</span></label>
+                <input 
+                  type="text" 
+                  required 
+                  value={editProjectForm.name} 
+                  onChange={e => setEditProjectForm({...editProjectForm, name: e.target.value})} 
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:border-primary-500 outline-none text-sm" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Deskripsi</label>
+                <textarea 
+                  value={editProjectForm.description} 
+                  onChange={e => setEditProjectForm({...editProjectForm, description: e.target.value})} 
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:border-primary-500 outline-none resize-none text-sm" 
+                  rows={2} 
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+                  <select 
+                    value={editProjectForm.status} 
+                    onChange={e => setEditProjectForm({...editProjectForm, status: e.target.value})} 
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:border-primary-500 outline-none bg-white text-sm"
+                  >
+                    <option value="Planning">Planning</option>
+                    <option value="Active">Active</option>
+                    <option value="Completed">Completed</option>
+                    <option value="On Hold">On Hold</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Tenggat</label>
+                  <input 
+                    type="date" 
+                    value={editProjectForm.dueDate} 
+                    onChange={e => setEditProjectForm({...editProjectForm, dueDate: e.target.value})} 
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:border-primary-500 outline-none text-sm" 
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Warna Tema</label>
+                <div className="flex gap-2">
+                  {['bg-blue-500', 'bg-indigo-500', 'bg-emerald-500', 'bg-amber-500', 'bg-purple-500', 'bg-rose-500'].map(c => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setEditProjectForm({...editProjectForm, color: c})}
+                      className={cn(
+                        "w-7 h-7 rounded-full transition-transform",
+                        c,
+                        editProjectForm.color === c ? "ring-2 ring-offset-2 ring-primary-500 scale-110" : "hover:scale-105"
+                      )}
+                    />
+                  ))}
+                </div>
+              </div>
+              
+              <div className="pt-4 flex gap-3 justify-end border-t border-slate-100">
+                <button type="button" onClick={() => setEditingProject(null)} className="px-5 py-2.5 text-slate-600 font-medium hover:bg-slate-100 rounded-xl transition-colors text-sm">Batal</button>
+                <button type="submit" className="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-xl transition-colors shadow-sm shadow-primary-500/30 text-sm font-semibold">Simpan Perubahan</button>
               </div>
             </form>
           </div>

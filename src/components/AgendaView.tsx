@@ -3,7 +3,7 @@ import { useAppStore } from '../store/useAppStore';
 import type { Task, Meeting, Event } from '../types';
 import { format, differenceInDays, isTomorrow, isSameDay } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { CalendarClock, CheckSquare, CalendarDays, Calendar as CalendarIcon, Clock, MapPin, User } from 'lucide-react';
+import { CalendarClock, CheckSquare, CalendarDays, Calendar as CalendarIcon, Clock, MapPin, User, ArrowRight } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { parseAnyDate, parseDueDateParts } from '../lib/dateUtils';
@@ -25,7 +25,11 @@ type UnifiedAgendaItem = {
   raw: Task | Meeting | Event;
 };
 
-export default function AgendaView() {
+interface AgendaViewProps {
+  onNavigate?: (tab: string) => void;
+}
+
+export default function AgendaView({ onNavigate }: AgendaViewProps) {
   const { tasks, meetings, events } = useAppStore();
   const [filterType, setFilterType] = useState<'all' | 'task' | 'meeting' | 'event'>('all');
 
@@ -144,6 +148,16 @@ export default function AgendaView() {
     }
   };
 
+  const handleItemClick = (item: UnifiedAgendaItem) => {
+    if (item.sourceType === 'task') {
+      onNavigate?.('tasks');
+    } else if (item.sourceType === 'meeting') {
+      onNavigate?.('meetings');
+    } else if (item.sourceType === 'event') {
+      onNavigate?.('calendar');
+    }
+  };
+
   return (
     <div className="flex-1 flex flex-col h-full min-h-0 bg-slate-50/50 p-4 md:p-8 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
       <div className="max-w-4xl w-full mx-auto flex-1 flex flex-col min-h-0">
@@ -179,7 +193,11 @@ export default function AgendaView() {
             </div>
           ) : (
             filteredItems.map(item => (
-              <div key={item.id} className="bg-white border border-slate-200 rounded-2xl p-4 md:p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col md:flex-row gap-4 group">
+              <div 
+                key={item.id} 
+                onClick={() => handleItemClick(item)}
+                className="bg-white border border-slate-200 hover:border-primary-400 rounded-2xl p-4 md:p-5 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row gap-4 group cursor-pointer active:scale-[0.99]"
+              >
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
                     <div className={cn("p-1.5 rounded-lg flex items-center justify-center", 
@@ -204,9 +222,13 @@ export default function AgendaView() {
                     )}
                   </div>
                 </div>
-                <div className="flex items-center md:items-start justify-between md:flex-col shrink-0 border-t md:border-t-0 md:border-l border-slate-100 pt-3 md:pt-0 md:pl-4">
-                  <div className="flex items-center h-full">
+                <div className="flex items-center md:items-end justify-between md:flex-col shrink-0 border-t md:border-t-0 md:border-l border-slate-100 pt-3 md:pt-0 md:pl-4">
+                  <div className="flex items-center">
                     {getDaysBadge(item.dateObj)}
+                  </div>
+                  <div className="text-xs font-medium text-primary-600 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 mt-auto">
+                    <span>Lihat detail</span>
+                    <ArrowRight size={13} />
                   </div>
                 </div>
               </div>

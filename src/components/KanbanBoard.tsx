@@ -64,6 +64,7 @@ export default function KanbanBoard() {
   
   const [searchTerm, setSearchTerm] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('All');
+  const [newChecklistText, setNewChecklistText] = useState('');
 
   // Handle global search focus
   useEffect(() => {
@@ -176,6 +177,33 @@ export default function KanbanBoard() {
     }
 
     setEditingTask(null);
+  };
+
+  const handleToggleChecklist = async (itemId: string) => {
+    if (!detailTask) return;
+    const currentList = detailTask.checklist || [];
+    const updatedList = currentList.map(c => c.id === itemId ? { ...c, done: !c.done } : c);
+    await updateTask(detailTask.id, { checklist: updatedList });
+    setDetailTask({ ...detailTask, checklist: updatedList });
+  };
+
+  const handleAddChecklistItem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!detailTask || !newChecklistText.trim()) return;
+    const currentList = detailTask.checklist || [];
+    const newItem = { id: `chk-${Date.now()}`, text: newChecklistText.trim(), done: false };
+    const updatedList = [...currentList, newItem];
+    await updateTask(detailTask.id, { checklist: updatedList });
+    setDetailTask({ ...detailTask, checklist: updatedList });
+    setNewChecklistText('');
+  };
+
+  const handleDeleteChecklistItem = async (itemId: string) => {
+    if (!detailTask) return;
+    const currentList = detailTask.checklist || [];
+    const updatedList = currentList.filter(c => c.id !== itemId);
+    await updateTask(detailTask.id, { checklist: updatedList });
+    setDetailTask({ ...detailTask, checklist: updatedList });
   };
   
   // --- DND Kit Setup ---
@@ -630,6 +658,81 @@ export default function KanbanBoard() {
                   <span className="text-sm text-slate-700 font-medium">{detailTask.assignee}</span>
                 </div>
               </div>
+
+              {/* Checklist / Subtugas */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Subtugas / Checklist ({detailTask.checklist?.filter(c => c.done).length || 0}/{(detailTask.checklist || []).length})
+                  </label>
+                  {(detailTask.checklist || []).length > 0 && (
+                    <span className="text-xs font-semibold text-slate-500">
+                      {Math.round(((detailTask.checklist?.filter(c => c.done).length || 0) / (detailTask.checklist?.length || 1)) * 100)}%
+                    </span>
+                  )}
+                </div>
+
+                {/* Progress Bar */}
+                {(detailTask.checklist || []).length > 0 && (
+                  <div className="w-full bg-slate-100 rounded-full h-1.5 mb-3 overflow-hidden">
+                    <div
+                      className="bg-primary-600 h-full rounded-full transition-all duration-300"
+                      style={{
+                        width: `${Math.round(((detailTask.checklist?.filter(c => c.done).length || 0) / (detailTask.checklist?.length || 1)) * 100)}%`
+                      }}
+                    />
+                  </div>
+                )}
+
+                {/* Checklist Items */}
+                <div className="space-y-2 mb-3">
+                  {(detailTask.checklist || []).map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200/60 hover:bg-white hover:border-slate-300 transition-all group"
+                    >
+                      <label className="flex items-center gap-2.5 cursor-pointer flex-1 min-w-0">
+                        <input
+                          type="checkbox"
+                          checked={item.done}
+                          onChange={() => handleToggleChecklist(item.id)}
+                          className="w-4 h-4 rounded text-primary-600 border-slate-300 focus:ring-primary-500 cursor-pointer"
+                        />
+                        <span className={cn("text-sm truncate", item.done ? "line-through text-slate-400" : "text-slate-700 font-medium")}>
+                          {item.text}
+                        </span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteChecklistItem(item.id)}
+                        className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-600 p-1 rounded-lg transition-all"
+                        title="Hapus subtugas"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Add new checklist item input */}
+                <form onSubmit={handleAddChecklistItem} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newChecklistText}
+                    onChange={(e) => setNewChecklistText(e.target.value)}
+                    placeholder="Tambah subtugas baru..."
+                    className="flex-1 px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!newChecklistText.trim()}
+                    className="px-3.5 py-2 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold flex items-center gap-1 transition-all shadow-sm"
+                  >
+                    <Plus size={14} />
+                    Tambah
+                  </button>
+                </form>
+              </div>
             </div>
 
             {/* Detail Actions */}
@@ -935,6 +1038,18 @@ function TaskCard({
               )}>
                 <Calendar size={13} />
                 {task.dueDate}
+              </div>
+            )}
+            {task.checklist && task.checklist.length > 0 && (
+              <div 
+                className={cn(
+                  "flex items-center gap-1", 
+                  task.checklist.every(c => c.done) ? "text-emerald-600 font-semibold" : "text-slate-400"
+                )}
+                title={`${task.checklist.filter(c => c.done).length} dari ${task.checklist.length} subtugas selesai`}
+              >
+                <CheckCircle2 size={13} className={task.checklist.every(c => c.done) ? "text-emerald-500" : "text-slate-400"} />
+                <span>{task.checklist.filter(c => c.done).length}/{task.checklist.length}</span>
               </div>
             )}
             {(task.comments > 0 || task.attachments > 0) && (
