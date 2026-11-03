@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { initializeFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import { getAnalytics, isSupported, type Analytics } from 'firebase/analytics';
 import { parseFirebaseEnv } from './env';
@@ -14,7 +14,10 @@ const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
 // Firestore SDK v10+ enables offline persistence by default — no manual call needed.
-export const db = getFirestore(app);
+// ignoreUndefinedProperties ensures that optional/undefined fields do not throw client errors.
+export const db = initializeFirestore(app, {
+  ignoreUndefinedProperties: true,
+});
 
 export const storage = getStorage(app);
 

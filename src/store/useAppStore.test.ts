@@ -57,6 +57,18 @@ describe('useAppStore — writes', () => {
     );
   });
 
+  it('addTask strips undefined values so Firestore does not reject the document', async () => {
+    useAppStore.setState({ currentOrgId: 'org-A' });
+    const taskWithUndefined: Task = {
+      ...sampleTask,
+      id: 'task-undefined-check',
+      description: undefined,
+    };
+    await useAppStore.getState().addTask(taskWithUndefined);
+    const setDocPayload = (fs.setDoc.mock.calls[0] as unknown as [unknown, Record<string, unknown>])[1];
+    expect('description' in (setDocPayload || {})).toBe(false);
+  });
+
   it.each([
     ['addProject', 'projects', { id: 'p1', name: 'P', status: 'Active', progress: 0, members: 1, dueDate: '', color: 'blue' }],
     ['addDocument', 'documents', { id: 'd1', name: 'D', type: 'pdf', size: '1 KB', date: '', owner: 'me' }],

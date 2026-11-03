@@ -22,7 +22,7 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }: CommandP
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
-  const { tasks, projects, meetings, team, documents, setSearchFocus } = useAppStore();
+  const { tasks, projects, meetings, team, documents, setSearchFocus, setCreateTaskModalOpen } = useAppStore();
 
   useEffect(() => {
     if (isOpen) {
@@ -41,7 +41,19 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }: CommandP
   // Quick actions (always shown when no query)
   if (!q) {
     results.push(
-      { id: 'new-task', type: 'action', title: 'Buat Task Baru', subtitle: 'Tambahkan ke Kanban Board', tab: 'tasks', icon: <Plus size={15} className="text-primary-500" />, onSelect: () => { onNavigate('tasks'); onClose(); } },
+      { 
+        id: 'new-task', 
+        type: 'action', 
+        title: 'Buat Task Baru', 
+        subtitle: 'Tambahkan ke Kanban Board', 
+        tab: 'tasks', 
+        icon: <Plus size={15} className="text-primary-500" />, 
+        onSelect: () => { 
+          onNavigate('tasks'); 
+          setCreateTaskModalOpen(true);
+          onClose(); 
+        } 
+      },
       { id: 'new-meeting', type: 'action', title: 'Buat Rapat Baru', subtitle: 'Jadwalkan rapat baru', tab: 'meetings', icon: <Plus size={15} className="text-indigo-500" />, onSelect: () => { onNavigate('meetings'); onClose(); } },
       { id: 'new-project', type: 'action', title: 'Buat Proyek Baru', subtitle: 'Mulai proyek baru', tab: 'projects', icon: <Plus size={15} className="text-emerald-500" />, onSelect: () => { onNavigate('projects'); onClose(); } },
       { id: 'go-kanban', type: 'action', title: 'Papan Kanban', subtitle: 'Lihat semua task', tab: 'tasks', icon: <CheckSquare size={15} className="text-slate-500" />, onSelect: () => { onNavigate('tasks'); onClose(); } },

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAppStore, type Task, type TaskStatus, type Priority } from '../store/useAppStore';
 import { Plus, MoreHorizontal, Calendar, MessageSquare, Paperclip, AlertCircle, Search, X, Trash2, CheckCircle2, GripVertical, Pencil, Clock } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
@@ -34,9 +34,23 @@ const COLUMNS: { id: TaskStatus; title: string; color: string }[] = [
 ];
 
 export default function KanbanBoard() {
-  const { tasks, updateTaskStatus, addTask, updateTask, deleteTask, projects, team, currentUser, searchFocus, setSearchFocus } = useAppStore();
+  const { 
+    tasks, 
+    updateTaskStatus, 
+    addTask, 
+    updateTask, 
+    deleteTask, 
+    projects, 
+    team, 
+    currentUser, 
+    searchFocus, 
+    setSearchFocus,
+    isCreateTaskModalOpen,
+    setCreateTaskModalOpen 
+  } = useAppStore();
   
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [detailTask, setDetailTask] = useState<Task | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
@@ -80,6 +94,30 @@ export default function KanbanBoard() {
     }
   }, [searchFocus, tasks, setSearchFocus]);
   
+  const handleQuickAdd = useCallback((status: TaskStatus = 'backlog') => {
+    setNewTask({ 
+      title: '', 
+      description: '',
+      projectId: projects.length > 0 ? projects[0].id : '', 
+      priority: 'Medium', 
+      status, 
+      dueDate: '',
+      dueTime: '',
+      assignee: currentUser?.name || (team.length > 0 ? team[0].name : 'M')
+    });
+    setIsModalOpen(true);
+  }, [projects, currentUser, team]);
+
+  // Handle external trigger to open create task modal (e.g. from CommandPalette)
+  useEffect(() => {
+    if (isCreateTaskModalOpen) {
+      setTimeout(() => {
+        handleQuickAdd('backlog');
+        setCreateTaskModalOpen(false);
+      }, 0);
+    }
+  }, [isCreateTaskModalOpen, setCreateTaskModalOpen, handleQuickAdd]);
+
   // A11y Focus trap and Esc key for Modals
   const modalRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -93,43 +131,41 @@ export default function KanbanBoard() {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isModalOpen, editingTask]);
 
-  const handleQuickAdd = (status: TaskStatus = 'backlog') => {
-    setNewTask({ 
-      title: '', 
-      description: '',
-      projectId: projects.length > 0 ? projects[0].id : '', 
-      priority: 'Medium', 
-      status, 
-      dueDate: '',
-      dueTime: '',
-      assignee: currentUser?.name || (team.length > 0 ? team[0].name : 'M')
-    });
-    setIsModalOpen(true);
-  };
-
-  const handleSaveTask = (e: React.FormEvent) => {
+  const handleSaveTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTask.title || newTask.title.trim() === '') return;
     
-    const formattedDate = formatTaskDueDate(newTask.dueDate, newTask.dueTime);
-    const selectedProject = projects.find(p => p.id === newTask.projectId);
-    const projectName = selectedProject ? selectedProject.name : 'General';
-    
-    addTask({
-      id: `task-${Date.now()}`,
-      title: newTask.title.trim(),
-      description: newTask.description?.trim() || undefined,
-      project: projectName, // Save the actual project name
-      priority: newTask.priority as Priority,
-      status: newTask.status,
-      dueDate: formattedDate,
-      comments: 0,
-      attachments: 0,
-      assignee: newTask.assignee || currentUser?.name || 'M'
-    });
-    
-    setIsModalOpen(false);
-    setNewTask({ title: '', description: '', projectId: '', priority: 'Medium', status: 'backlog', dueDate: '', dueTime: '', assignee: '' });
+    setIsSubmitting(true);
+    try {
+      const formattedDate = formatTaskDueDate(newTask.dueDate, newTask.dueTime);
+      const selectedProject = projects.find(p => p.id === newTask.projectId);
+      const projectName = selectedProject ? selectedProject.name : 'General';
+      
+      const taskPayload: Task = {
+        id: `task-${Date.now()}`,
+        title: newTask.title.trim(),
+        project: projectName, // Save the actual project name
+        priority: newTask.priority as Priority,
+        status: newTask.status,
+        dueDate: formattedDate,
+        comments: 0,
+        attachments: 0,
+        assignee: newTask.assignee || currentUser?.name || 'M'
+      };
+
+      if (newTask.description && newTask.description.trim().length > 0) {
+        taskPayload.description = newTask.description.trim();
+      }
+
+      await addTask(taskPayload);
+      
+      setIsModalOpen(false);
+      setNewTask({ title: '', description: '', projectId: '', priority: 'Medium', status: 'backlog', dueDate: '', dueTime: '', assignee: '' });
+    } catch (err) {
+      console.error('Failed to create task:', err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleOpenEdit = (task: Task) => {
@@ -379,16 +415,14 @@ export default function KanbanBoard() {
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Proyek</label>
                   <select 
-                    required
                     value={newTask.projectId} 
                     onChange={e => setNewTask({...newTask, projectId: e.target.value})} 
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:border-primary-500 focus:ring-primary-500/20 outline-none bg-white transition-all text-sm"
                   >
-                    <option value="" disabled>Pilih proyek</option>
+                    <option value="">Umum (Tanpa Proyek)</option>
                     {projects.map(p => (
                       <option key={p.id} value={p.id}>{p.name}</option>
                     ))}
-                    {projects.length === 0 && <option value="general">Umum (Tidak Ada Proyek)</option>}
                   </select>
                 </div>
                 <div>
@@ -434,7 +468,13 @@ export default function KanbanBoard() {
               
               <div className="pt-4 flex gap-3 justify-end border-t border-slate-100">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 text-slate-600 font-medium hover:bg-slate-100 rounded-xl transition-colors outline-none focus-visible:ring-2 focus-visible:ring-slate-400 text-sm">Batal</button>
-                <button type="submit" className="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-xl transition-colors shadow-sm shadow-primary-500/30 outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 text-sm">Buat Tugas</button>
+                <button 
+                  type="submit" 
+                  disabled={isSubmitting}
+                  className="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-xl transition-colors shadow-sm shadow-primary-500/30 outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 text-sm flex items-center gap-2"
+                >
+                  {isSubmitting ? 'Menyimpan...' : 'Buat Tugas'}
+                </button>
               </div>
             </form>
           </div>
@@ -498,11 +538,10 @@ export default function KanbanBoard() {
                     onChange={e => setEditForm({...editForm, projectId: e.target.value})} 
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:border-primary-500 focus:ring-primary-500/20 outline-none bg-white transition-all text-sm"
                   >
-                    <option value="" disabled>Pilih proyek</option>
+                    <option value="">Umum (Tanpa Proyek)</option>
                     {projects.map(p => (
                       <option key={p.id} value={p.id}>{p.name}</option>
                     ))}
-                    {projects.length === 0 && <option value="general">Umum (Tidak Ada Proyek)</option>}
                   </select>
                 </div>
                 <div>

@@ -36,7 +36,17 @@ export const createTaskSlice: StateCreator<AppState, [], [], TaskSlice> = (set, 
     const user = get().currentUser;
     const orgId = user?.organizationId || get().currentOrgId;
     try { 
-      await setDoc(doc(db, 'tasks', task.id), { ...task, organizationId: orgId, createdAt: new Date().toISOString() }); 
+      const payload: Record<string, unknown> = {
+        ...task,
+        organizationId: orgId,
+        createdAt: new Date().toISOString()
+      };
+      Object.keys(payload).forEach(key => {
+        if (payload[key] === undefined) {
+          delete payload[key];
+        }
+      });
+      await setDoc(doc(db, 'tasks', task.id), payload); 
       toast.success('Tugas berhasil dibuat');
       if (user) logAuditAction(orgId, user, 'CREATE', 'Task', task.id, `Created task "${task.title}"`);
     } catch (err) { const e = err as Error; 
@@ -50,7 +60,13 @@ export const createTaskSlice: StateCreator<AppState, [], [], TaskSlice> = (set, 
     const user = get().currentUser;
     const orgId = user?.organizationId || get().currentOrgId;
     try { 
-      await updateDoc(doc(db, 'tasks', taskId), updates as Record<string, unknown>); 
+      const payload: Record<string, unknown> = { ...updates };
+      Object.keys(payload).forEach(key => {
+        if (payload[key] === undefined) {
+          delete payload[key];
+        }
+      });
+      await updateDoc(doc(db, 'tasks', taskId), payload); 
       toast.success('Tugas diperbarui');
       if (user) logAuditAction(orgId, user, 'UPDATE', 'Task', taskId, `Updated task details`);
     } catch (err) { const e = err as Error; 

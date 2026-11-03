@@ -71,7 +71,21 @@ describe('KanbanBoard', () => {
 
     expect(addTask).toHaveBeenCalledTimes(1);
     expect(addTask.mock.calls[0][0]).toMatchObject({ title: 'Print banners', status: 'review', priority: 'Medium' });
+    expect('description' in addTask.mock.calls[0][0]).toBe(false);
     expect(screen.queryByText('Buat Tugas Baru')).not.toBeInTheDocument();
+  });
+
+  it('creates a task even when projects list is empty', async () => {
+    useAppStore.setState({ projects: [] });
+    const user = userEvent.setup();
+    render(<KanbanBoard />);
+
+    await user.click(within(column(/Backlog/)).getByRole('button', { name: /Tambah Tugas/ }));
+    await user.type(screen.getByPlaceholderText('misalnya, Desain mockup beranda'), 'Task without project');
+    await user.click(screen.getByRole('button', { name: 'Buat Tugas' }));
+
+    expect(addTask).toHaveBeenCalledTimes(1);
+    expect(addTask.mock.calls[0][0]).toMatchObject({ title: 'Task without project', project: 'General' });
   });
 
   it('filters tasks using the search bar', async () => {
