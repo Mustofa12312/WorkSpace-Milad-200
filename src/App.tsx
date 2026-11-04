@@ -48,17 +48,17 @@ function App() {
     <Router>
       <Toaster position="top-right" />
       <Routes>
-        <Route 
-          path="/auth" 
-          element={currentUser ? <Navigate to="/dashboard" replace /> : <Auth />} 
+        <Route
+          path="/auth"
+          element={currentUser ? <Navigate to="/dashboard" replace /> : <Auth />}
         />
-        <Route 
-          path="/dashboard" 
-          element={currentUser ? <DashboardLayout /> : <Navigate to="/auth" replace />} 
+        <Route
+          path="/dashboard"
+          element={currentUser ? <DashboardLayout /> : <Navigate to="/auth" replace />}
         />
-        <Route 
-          path="*" 
-          element={<Navigate to={currentUser ? "/dashboard" : "/auth"} replace />} 
+        <Route
+          path="*"
+          element={<Navigate to={currentUser ? "/dashboard" : "/auth"} replace />}
         />
       </Routes>
     </Router>

@@ -95,3 +95,12 @@ export function parseAnyDate(dateStr?: string): Date | null {
 
   return null;
 }
+
+export function isDueDateOverdue(dueDateStr?: string): boolean {
+  if (!dueDateStr || dueDateStr === 'No date') return false;
+  const lower = dueDateStr.toLowerCase();
+  if (lower.includes('today') || lower.includes('urgent') || lower.includes('hari ini')) return true;
+  const parsed = parseAnyDate(dueDateStr);
+  if (!parsed) return false;
+  return parsed.getTime() < Date.now();
+}

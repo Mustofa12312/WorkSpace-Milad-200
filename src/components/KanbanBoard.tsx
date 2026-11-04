@@ -1,9 +1,33 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAppStore, type Task, type TaskStatus, type Priority } from '../store/useAppStore';
-import { Plus, MoreHorizontal, Calendar, MessageSquare, Paperclip, AlertCircle, Search, X, Trash2, CheckCircle2, GripVertical, Pencil, Clock } from 'lucide-react';
+import { 
+  Plus, 
+  MoreHorizontal, 
+  Calendar, 
+  MessageSquare, 
+  Paperclip, 
+  Search, 
+  X, 
+  Trash2, 
+  CheckCircle2, 
+  GripVertical, 
+  Pencil, 
+  Clock,
+  Lightbulb,
+  ListTodo,
+  Timer,
+  Sparkles,
+  Flame,
+  ArrowUp,
+  ArrowDown,
+  Minus,
+  Check,
+  Filter,
+  Eye
+} from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { parseDueDateParts, formatTaskDueDate } from '../lib/dateUtils';
+import { parseDueDateParts, formatTaskDueDate, isDueDateOverdue } from '../lib/dateUtils';
 
 // DND Kit
 import { 
@@ -25,13 +49,70 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-const COLUMNS: { id: TaskStatus; title: string; color: string }[] = [
-  { id: 'backlog', title: '💡 Backlog', color: 'border-slate-200 bg-slate-50' },
-  { id: 'planned', title: '📌 Direncanakan', color: 'border-blue-200 bg-blue-50' },
-  { id: 'in_progress', title: '🔵 Berjalan', color: 'border-indigo-200 bg-indigo-50' },
-  { id: 'review', title: '🟡 Evaluasi', color: 'border-amber-200 bg-amber-50' },
-  { id: 'completed', title: '🟢 Selesai', color: 'border-emerald-200 bg-emerald-50' },
+function getAssigneeInitials(name?: string): string {
+  if (!name || !name.trim()) return 'M';
+  const clean = name.trim();
+  const words = clean.split(/[\s._-]+/);
+  if (words.length === 1) {
+    return clean.slice(0, 2).toUpperCase();
+  }
+  return (words[0][0] + words[1][0]).toUpperCase();
+}
+
+const COLUMNS = [
+  { 
+    id: 'backlog' as TaskStatus, 
+    title: 'Backlog', 
+    color: 'border-slate-200/80 bg-slate-50', 
+    iconBg: 'bg-slate-200/70 text-slate-700',
+    iconColor: 'text-slate-600',
+    badgeBg: 'bg-slate-200/80 text-slate-700',
+    icon: Lightbulb 
+  },
+  { 
+    id: 'planned' as TaskStatus, 
+    title: 'Direncanakan', 
+    color: 'border-blue-200/80 bg-blue-50/70', 
+    iconBg: 'bg-blue-100 text-blue-700',
+    iconColor: 'text-blue-600',
+    badgeBg: 'bg-blue-100 text-blue-700',
+    icon: ListTodo 
+  },
+  { 
+    id: 'in_progress' as TaskStatus, 
+    title: 'Berjalan', 
+    color: 'border-indigo-200/80 bg-indigo-50/70', 
+    iconBg: 'bg-indigo-100 text-indigo-700',
+    iconColor: 'text-indigo-600',
+    badgeBg: 'bg-indigo-100 text-indigo-700',
+    icon: Timer 
+  },
+  { 
+    id: 'review' as TaskStatus, 
+    title: 'Evaluasi', 
+    color: 'border-amber-200/80 bg-amber-50/70', 
+    iconBg: 'bg-amber-100 text-amber-700',
+    iconColor: 'text-amber-600',
+    badgeBg: 'bg-amber-100 text-amber-700',
+    icon: Sparkles 
+  },
+  { 
+    id: 'completed' as TaskStatus, 
+    title: 'Selesai', 
+    color: 'border-emerald-200/80 bg-emerald-50/70', 
+    iconBg: 'bg-emerald-100 text-emerald-700',
+    iconColor: 'text-emerald-600',
+    badgeBg: 'bg-emerald-100 text-emerald-700',
+    icon: CheckCircle2 
+  },
 ];
+
+const priorityConfig: Record<Priority, { bg: string; icon: typeof Minus }> = {
+  Low: { bg: 'bg-slate-50 text-slate-600 border-slate-200', icon: ArrowDown },
+  Medium: { bg: 'bg-blue-50 text-blue-700 border-blue-200', icon: Minus },
+  High: { bg: 'bg-amber-50 text-amber-700 border-amber-200', icon: ArrowUp },
+  Urgent: { bg: 'bg-rose-50 text-rose-700 border-rose-200', icon: Flame },
+};
 
 export default function KanbanBoard() {
   const { 
@@ -301,8 +382,8 @@ export default function KanbanBoard() {
         </div>
         <div className="flex flex-col md:flex-row gap-3 items-start md:items-center w-full md:w-auto">
           
-          <div className="flex items-center bg-white rounded-xl px-4 py-2 w-full md:w-60 border border-slate-200 focus-within:ring-2 focus-within:ring-primary-500/20 shadow-sm transition-shadow">
-            <Search size={16} className="text-slate-400" />
+          <div className="flex items-center bg-white rounded-xl px-4 py-2 w-full md:w-64 border border-slate-200 focus-within:ring-2 focus-within:ring-primary-500/20 shadow-xs transition-shadow">
+            <Search size={16} className="text-slate-400 flex-shrink-0" />
             <input 
               type="text" 
               placeholder="Cari tugas..." 
@@ -310,19 +391,30 @@ export default function KanbanBoard() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="bg-transparent border-none outline-none ml-2 w-full text-sm placeholder-slate-400"
             />
+            {searchTerm && (
+              <button 
+                type="button" 
+                onClick={() => setSearchTerm('')} 
+                className="text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer"
+                title="Hapus pencarian"
+              >
+                <X size={14} />
+              </button>
+            )}
           </div>
 
-          <div className="flex items-center bg-white rounded-xl px-3 py-2 border border-slate-200 shadow-sm">
+          <div className="flex items-center bg-white rounded-xl px-3 py-2 border border-slate-200 shadow-xs">
+            <Filter size={15} className="text-slate-400 mr-1.5 flex-shrink-0" />
             <select
               value={priorityFilter}
               onChange={(e) => setPriorityFilter(e.target.value)}
               className="bg-transparent border-none outline-none text-sm text-slate-700 font-medium cursor-pointer"
             >
               <option value="All">Semua Prioritas</option>
-              <option value="Urgent">🔴 Urgent</option>
-              <option value="High">🟠 High</option>
-              <option value="Medium">🔵 Medium</option>
-              <option value="Low">⚪ Low</option>
+              <option value="Urgent">Urgent</option>
+              <option value="High">High</option>
+              <option value="Medium">Medium</option>
+              <option value="Low">Low</option>
             </select>
           </div>
 
@@ -438,7 +530,7 @@ export default function KanbanBoard() {
                   <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
                   <select value={newTask.status} onChange={e => setNewTask({...newTask, status: e.target.value as TaskStatus})} className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:border-primary-500 focus:ring-primary-500/20 outline-none bg-white transition-all text-sm">
                     {COLUMNS.map(col => (
-                      <option key={col.id} value={col.id}>{col.title.replace(/[^a-zA-Z ]/g, '').trim()}</option>
+                      <option key={col.id} value={col.id}>{col.title}</option>
                     ))}
                   </select>
                 </div>
@@ -565,7 +657,7 @@ export default function KanbanBoard() {
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:border-primary-500 focus:ring-primary-500/20 outline-none bg-white transition-all text-sm"
                   >
                     {COLUMNS.map(col => (
-                      <option key={col.id} value={col.id}>{col.title.replace(/[^a-zA-Z ]/g, '').trim()}</option>
+                      <option key={col.id} value={col.id}>{col.title}</option>
                     ))}
                   </select>
                 </div>
@@ -650,19 +742,24 @@ export default function KanbanBoard() {
               <div>
                 <label className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 block">Status</label>
                 <div className="flex flex-wrap gap-2">
-                  {(['backlog', 'planned', 'in_progress', 'review', 'completed'] as TaskStatus[]).map(s => (
-                    <button
-                      key={s}
-                      onClick={() => { updateTaskStatus(detailTask.id, s); setDetailTask({...detailTask, status: s}); }}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all border ${
-                        detailTask.status === s
-                          ? 'bg-primary-600 text-white border-primary-600 shadow-sm'
-                          : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
-                      }`}
-                    >
-                      {s === 'backlog' ? '💡 Backlog' : s === 'planned' ? '📌 Direncanakan' : s === 'in_progress' ? '🔵 Berjalan' : s === 'review' ? '🟡 Evaluasi' : '🟢 Selesai'}
-                    </button>
-                  ))}
+                  {COLUMNS.map(col => {
+                    const SIcon = col.icon;
+                    const isActive = detailTask.status === col.id;
+                    return (
+                      <button
+                        key={col.id}
+                        onClick={() => { updateTaskStatus(detailTask.id, col.id); setDetailTask({...detailTask, status: col.id}); }}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border flex items-center gap-1.5 cursor-pointer ${
+                          isActive
+                            ? 'bg-primary-600 text-white border-primary-600 shadow-xs'
+                            : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                        }`}
+                      >
+                        <SIcon size={13} className={isActive ? 'text-white' : col.iconColor} />
+                        <span>{col.title}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -691,10 +788,10 @@ export default function KanbanBoard() {
               <div>
                 <label className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 block">Penanggung Jawab</label>
                 <div className="flex items-center gap-2.5 bg-slate-50 p-3 rounded-xl border border-slate-200/80">
-                  <div className="h-8 w-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full text-white flex items-center justify-center font-bold text-xs shadow-sm flex-shrink-0">
-                    {detailTask.assignee}
+                  <div className="h-8 w-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full text-white flex items-center justify-center font-bold text-xs shadow-xs flex-shrink-0">
+                    {getAssigneeInitials(detailTask.assignee)}
                   </div>
-                  <span className="text-sm text-slate-700 font-medium">{detailTask.assignee}</span>
+                  <span className="text-sm text-slate-700 font-medium truncate">{detailTask.assignee || 'Anggota Tim'}</span>
                 </div>
               </div>
 
@@ -822,7 +919,7 @@ export default function KanbanBoard() {
 
 // --- DND Kit Column Component ---
 function DroppableColumn({ column, tasks, onQuickAdd, onOpenDetail, onOpenEdit }: { 
-  column: { id: TaskStatus; title: string; color: string }, 
+  column: typeof COLUMNS[number], 
   tasks: Task[], 
   onQuickAdd: () => void,
   onOpenDetail: (t: Task) => void,
@@ -833,47 +930,57 @@ function DroppableColumn({ column, tasks, onQuickAdd, onOpenDetail, onOpenEdit }
     data: { type: 'Column', column }
   });
 
+  const ColumnIcon = column.icon;
+
   return (
     <div 
       ref={setNodeRef}
       className={cn(
-        "flex-shrink-0 w-[85vw] md:w-80 snap-center bg-slate-100/50 rounded-2xl flex flex-col max-h-full border transition-colors",
-        isOver ? "border-primary-400 bg-primary-50/30 shadow-sm" : "border-slate-200/60"
+        "flex-shrink-0 w-[85vw] md:w-80 snap-center bg-slate-100/60 rounded-2xl flex flex-col max-h-full border transition-all duration-150",
+        isOver ? "border-primary-400 bg-primary-50/40 shadow-md ring-2 ring-primary-500/20" : "border-slate-200/70 shadow-2xs"
       )}
     >
       {/* Column Header */}
-      <div className={cn("p-4 border-b rounded-t-2xl flex justify-between items-center sticky top-0 bg-white/50 backdrop-blur-sm z-10", column.color)}>
-        <h3 className="font-semibold text-slate-700 flex items-center gap-2">
-          {column.title}
-          <span className="bg-white/80 text-slate-600 px-2 py-0.5 rounded-full text-xs font-bold shadow-sm">
+      <div className={cn("px-4 py-3 border-b rounded-t-2xl flex justify-between items-center sticky top-0 bg-white/90 backdrop-blur-md z-10", column.color)}>
+        <h3 className="font-semibold text-slate-800 flex items-center gap-2 text-sm tracking-tight">
+          <span className={cn("w-6 h-6 rounded-lg flex items-center justify-center shadow-2xs", column.iconBg)}>
+            <ColumnIcon size={14} className={column.iconColor} />
+          </span>
+          <span>{column.title}</span>
+          <span className={cn("px-2 py-0.5 rounded-full text-[11px] font-bold shadow-2xs", column.badgeBg)}>
             {tasks.length}
           </span>
         </h3>
-        <button className="text-slate-400 hover:text-slate-600 p-1 rounded-md hover:bg-white/50 transition-colors">
-          <MoreHorizontal size={18} />
+        <button 
+          onClick={onQuickAdd}
+          className="text-slate-400 hover:text-primary-600 p-1.5 rounded-lg hover:bg-white/80 transition-all cursor-pointer"
+          title={`Tambah tugas ke ${column.title}`}
+        >
+          <Plus size={16} />
         </button>
       </div>
 
       {/* Column Body / Tasks List */}
-      <div className="p-3 flex-1 overflow-y-auto space-y-3 custom-scrollbar min-h-[150px]">
+      <div className="p-3 flex-1 overflow-y-auto overflow-x-hidden space-y-2.5 custom-scrollbar min-h-[150px]">
         {tasks.map((task) => (
           <DraggableTask key={task.id} task={task} onOpenDetail={onOpenDetail} onOpenEdit={onOpenEdit} />
         ))}
         
         {tasks.length === 0 && !isOver && (
-          <div className="h-24 border-2 border-dashed border-slate-300 rounded-xl flex items-center justify-center text-slate-400 text-sm">
-            Belum ada tugas
+          <div className="h-28 border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center text-slate-400 text-xs gap-1.5 bg-white/40">
+            <ColumnIcon size={20} className={cn("opacity-40", column.iconColor)} />
+            <span>Belum ada tugas</span>
           </div>
         )}
       </div>
       
       {/* Quick Add Button */}
-      <div className="p-3 border-t border-slate-200/50 bg-slate-50/50 rounded-b-2xl mt-auto">
+      <div className="p-2.5 border-t border-slate-200/60 bg-white/40 rounded-b-2xl mt-auto">
         <button 
           onClick={onQuickAdd}
-          className="w-full py-2.5 rounded-xl border border-dashed border-slate-300 text-slate-500 text-sm font-medium hover:border-primary-400 hover:text-primary-600 hover:bg-primary-50 transition-colors flex items-center justify-center gap-1.5 outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+          className="w-full py-2 rounded-xl border border-dashed border-slate-300 text-slate-600 text-xs font-semibold hover:border-primary-500 hover:text-primary-600 hover:bg-white transition-all flex items-center justify-center gap-1.5 shadow-2xs hover:shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-primary-500 cursor-pointer"
         >
-          <Plus size={16} />
+          <Plus size={14} />
           Tambah Tugas
         </button>
       </div>
@@ -902,16 +1009,12 @@ function DraggableTask({ task, onOpenDetail, onOpenEdit }: { task: Task; onOpenD
 
   return (
     <div ref={setNodeRef} style={style} className="relative outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded-xl touch-manipulation group">
-      {/* Drag handle zone at the top of the card — only this area triggers DnD */}
-      <div
-        {...listeners}
-        {...attributes}
-        className="absolute top-0 left-0 right-0 h-8 cursor-grab active:cursor-grabbing rounded-t-xl z-10 flex items-center px-4 opacity-0 hover:opacity-100 transition-opacity group-has-[:hover]:opacity-100"
-        title="Geser untuk memindahkan"
-      >
-        <GripVertical size={14} className="text-slate-400" />
-      </div>
-      <TaskCard task={task} onOpenDetail={onOpenDetail} onOpenEdit={onOpenEdit} />
+      <TaskCard 
+        task={task} 
+        onOpenDetail={onOpenDetail} 
+        onOpenEdit={onOpenEdit} 
+        dragHandleProps={{ attributes, listeners }}
+      />
     </div>
   );
 }
@@ -922,13 +1025,18 @@ function TaskCard({
   isDragging = false,
   isOverlay = false,
   onOpenDetail,
-  onOpenEdit
+  onOpenEdit,
+  dragHandleProps,
 }: { 
   task: Task;
   isDragging?: boolean;
   isOverlay?: boolean;
   onOpenDetail?: (t: Task) => void;
   onOpenEdit?: (t: Task) => void;
+  dragHandleProps?: {
+    attributes: unknown;
+    listeners: unknown;
+  };
 }) {
   const { updateTaskStatus, deleteTask } = useAppStore();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -966,58 +1074,72 @@ function TaskCard({
     }
   };
 
-  const priorityColors: Record<string, string> = {
-    Low: 'bg-slate-100 text-slate-600',
-    Medium: 'bg-blue-100 text-blue-700',
-    High: 'bg-orange-100 text-orange-700',
-    Urgent: 'bg-red-100 text-red-700',
-  };
+  const isOverdue = !isCompleted && isDueDateOverdue(task.dueDate);
+
+  const priorityMeta = priorityConfig[task.priority] || priorityConfig['Medium'];
+  const PriorityIcon = priorityMeta.icon;
 
   return (
     <>
       <div 
         className={cn(
-          "bg-white p-4 rounded-xl border transition-all group relative",
-          isOverlay ? "shadow-xl border-primary-400 scale-105 rotate-2 cursor-grabbing" : "border-slate-200 shadow-sm hover:shadow-md hover:border-slate-300",
-          isDragging && !isOverlay ? "opacity-50" : "",
-          isCompleted ? "bg-slate-50/70" : ""
+          "bg-white p-3.5 rounded-xl border transition-all group relative select-none",
+          isOverlay ? "shadow-xl border-primary-400 scale-105 rotate-1 cursor-grabbing ring-2 ring-primary-400/20" : "border-slate-200 shadow-2xs hover:shadow-md hover:border-slate-300",
+          isDragging && !isOverlay ? "opacity-40" : "",
+          isCompleted ? "bg-slate-50/80 border-slate-200" : ""
         )}
         onClick={() => !isOverlay && onOpenDetail && onOpenDetail(task)}
       >
-        <div className="flex justify-between items-start mb-3">
-          <div className="flex items-center gap-2">
+        <div className="flex justify-between items-start mb-2.5 gap-2">
+          <div className="flex items-center gap-1.5 min-w-0 flex-1">
+            {/* Drag Handle button */}
+            {dragHandleProps && (
+              <button
+                type="button"
+                {...(dragHandleProps.attributes as Record<string, unknown>)}
+                {...(dragHandleProps.listeners as Record<string, unknown>)}
+                onClick={(e) => e.stopPropagation()}
+                className="cursor-grab active:cursor-grabbing p-0.5 -ml-1 text-slate-300 hover:text-slate-600 rounded hover:bg-slate-100 transition-colors opacity-40 group-hover:opacity-100 flex-shrink-0"
+                title="Geser untuk memindahkan"
+              >
+                <GripVertical size={14} />
+              </button>
+            )}
+
             {/* Checkbox */}
             <button
+              type="button"
               onClick={handleCheckbox}
               title={isCompleted ? "Tandai belum selesai" : "Tandai selesai"}
               className={cn(
                 "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all cursor-pointer hover:scale-110",
                 isCompleted 
-                  ? "bg-emerald-500 border-emerald-500 text-white" 
-                  : "border-slate-300 hover:border-emerald-400"
+                  ? "bg-emerald-500 border-emerald-500 text-white shadow-2xs" 
+                  : "border-slate-300 hover:border-emerald-500 bg-white"
               )}
             >
               {isCompleted && (
-                <svg viewBox="0 0 12 12" fill="none" className="w-3 h-3">
-                  <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
+                <Check size={11} strokeWidth={3} />
               )}
             </button>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 bg-slate-100 px-2 py-1 rounded-md">
+
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md truncate max-w-[110px]" title={task.project}>
               {task.project}
             </span>
           </div>
-          <div className="flex items-center gap-1">
-            <span className={cn('text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md flex items-center gap-1', priorityColors[task.priority])}>
-              {task.priority === 'Urgent' && <AlertCircle size={10} />}
-              {task.priority}
+
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <span className={cn('text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md flex items-center gap-1 border', priorityMeta.bg)}>
+              <PriorityIcon size={10} strokeWidth={2.5} />
+              <span>{task.priority}</span>
             </span>
 
             {/* Quick edit button on hover */}
             {onOpenEdit && (
               <button
+                type="button"
                 onClick={(e) => { e.stopPropagation(); onOpenEdit(task); }}
-                className="opacity-0 group-hover:opacity-100 p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-primary-600 transition-all"
+                className="opacity-0 group-hover:opacity-100 p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-primary-600 transition-all cursor-pointer"
                 title="Edit Tugas & Jadwal"
               >
                 <Pencil size={13} />
@@ -1027,31 +1149,43 @@ function TaskCard({
             {/* Context Menu Button */}
             <div className="relative" ref={menuRef}>
               <button
+                type="button"
                 onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen); }}
-                className="opacity-0 group-hover:opacity-100 p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-all"
+                className="opacity-0 group-hover:opacity-100 p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-all cursor-pointer"
+                title="Menu pilihan"
               >
                 <MoreHorizontal size={15} />
               </button>
               {menuOpen && (
                 <div className="absolute right-0 top-7 w-48 bg-white border border-slate-200 rounded-xl shadow-xl py-1 z-30 animate-in fade-in zoom-in-95 duration-100">
-                  <button onClick={(e) => handleMenuAction(e, 'detail')} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2">
-                    <svg viewBox="0 0 16 16" fill="none" className="w-4 h-4 text-slate-400"><path d="M8 2C4.686 2 2 4.686 2 8s2.686 6 6 6 6-2.686 6-6-2.686-6-6-6zm0 10.5a.75.75 0 110-1.5.75.75 0 010 1.5zm.75-3.5a.75.75 0 01-1.5 0V6a.75.75 0 011.5 0v3z" fill="currentColor"/></svg>
+                  <button onClick={(e) => handleMenuAction(e, 'detail')} className="w-full text-left px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2">
+                    <Eye size={13} className="text-slate-400" />
                     Lihat Detail
                   </button>
-                  <button onClick={(e) => handleMenuAction(e, 'edit')} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2">
-                    <Pencil size={14} className="text-slate-400" />
+                  <button onClick={(e) => handleMenuAction(e, 'edit')} className="w-full text-left px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2">
+                    <Pencil size={13} className="text-slate-400" />
                     Edit Tugas & Jadwal
                   </button>
                   <hr className="my-1 border-slate-100" />
-                  <p className="px-4 py-1 text-[10px] text-slate-400 uppercase font-bold tracking-wider">Pindah ke</p>
-                  {(['backlog', 'planned', 'in_progress', 'review', 'completed'] as TaskStatus[]).filter(s => s !== task.status).map(s => (
-                    <button key={s} onClick={(e) => handleMenuAction(e, s)} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
-                      {s === 'backlog' ? '💡 Backlog' : s === 'planned' ? '📌 Direncanakan' : s === 'in_progress' ? '🔵 Berjalan' : s === 'review' ? '🟡 Evaluasi' : '🟢 Selesai'}
-                    </button>
-                  ))}
+                  <p className="px-3 py-1 text-[10px] text-slate-400 uppercase font-bold tracking-wider">Pindah ke</p>
+                  {COLUMNS.filter(col => col.id !== task.status).map(col => {
+                    const ColIcon = col.icon;
+                    return (
+                      <button 
+                        key={col.id} 
+                        onClick={(e) => handleMenuAction(e, col.id)} 
+                        className="w-full text-left px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                      >
+                        <span className={cn("p-1 rounded-md", col.iconBg)}>
+                          <ColIcon size={11} />
+                        </span>
+                        <span>{col.title}</span>
+                      </button>
+                    );
+                  })}
                   <hr className="my-1 border-slate-100" />
-                  <button onClick={(e) => handleMenuAction(e, 'delete')} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 font-medium">
-                    <Trash2 size={14} />
+                  <button onClick={(e) => handleMenuAction(e, 'delete')} className="w-full text-left px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 flex items-center gap-2 font-medium">
+                    <Trash2 size={13} />
                     Hapus Tugas
                   </button>
                 </div>
@@ -1061,22 +1195,22 @@ function TaskCard({
         </div>
         
         <h4 className={cn(
-          "font-semibold text-slate-800 mb-4 leading-tight transition-colors cursor-pointer",
+          "font-semibold text-slate-800 mb-3 text-sm leading-snug transition-colors cursor-pointer",
           isCompleted ? "line-through text-slate-400" : "group-hover:text-primary-600"
         )}>
           {task.title}
         </h4>
         
         {/* Footer */}
-        <div className="flex items-center justify-between mt-auto pt-3 border-t border-slate-100">
+        <div className="flex items-center justify-between mt-auto pt-2.5 border-t border-slate-100">
           <div className="flex items-center gap-3 text-xs font-medium text-slate-400">
             {task.dueDate && task.dueDate !== 'No date' && (
               <div className={cn(
                 "flex items-center gap-1", 
-                task.dueDate.includes('Today') || task.dueDate.includes('Urgent') ? "text-red-500 font-semibold" : ""
+                isOverdue ? "text-rose-500 font-semibold" : "text-slate-500"
               )}>
-                <Calendar size={13} />
-                {task.dueDate}
+                <Calendar size={12} className={isOverdue ? "text-rose-500" : "text-slate-400"} />
+                <span>{task.dueDate}</span>
               </div>
             )}
             {task.checklist && task.checklist.length > 0 && (
@@ -1087,30 +1221,33 @@ function TaskCard({
                 )}
                 title={`${task.checklist.filter(c => c.done).length} dari ${task.checklist.length} subtugas selesai`}
               >
-                <CheckCircle2 size={13} className={task.checklist.every(c => c.done) ? "text-emerald-500" : "text-slate-400"} />
+                <CheckCircle2 size={12} className={task.checklist.every(c => c.done) ? "text-emerald-500" : "text-slate-400"} />
                 <span>{task.checklist.filter(c => c.done).length}/{task.checklist.length}</span>
               </div>
             )}
             {(task.comments > 0 || task.attachments > 0) && (
               <div className="flex items-center gap-2">
                 {task.comments > 0 && (
-                  <div className="flex items-center gap-1">
-                    <MessageSquare size={13} />
-                    {task.comments}
+                  <div className="flex items-center gap-1" title={`${task.comments} komentar`}>
+                    <MessageSquare size={12} />
+                    <span>{task.comments}</span>
                   </div>
                 )}
                 {task.attachments > 0 && (
-                  <div className="flex items-center gap-1">
-                    <Paperclip size={13} />
-                    {task.attachments}
+                  <div className="flex items-center gap-1" title={`${task.attachments} lampiran`}>
+                    <Paperclip size={12} />
+                    <span>{task.attachments}</span>
                   </div>
                 )}
               </div>
             )}
           </div>
           
-          <div className="h-6 w-6 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full text-white flex items-center justify-center font-bold text-[10px] shadow-sm ring-2 ring-white">
-            {task.assignee}
+          <div 
+            className="h-6 w-6 min-w-6 flex-shrink-0 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full text-white flex items-center justify-center font-bold text-[10px] shadow-xs ring-2 ring-white uppercase tracking-tighter"
+            title={`Ditugaskan: ${task.assignee || 'Tidak ada'}`}
+          >
+            {getAssigneeInitials(task.assignee)}
           </div>
         </div>
       </div>
