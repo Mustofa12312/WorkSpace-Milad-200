@@ -11,7 +11,7 @@ function cn(...inputs: ClassValue[]) {
 import { useAppStore, type Project } from '../store/useAppStore';
 
 export default function ProjectsView() {
-  const { projects, tasks, addProject, updateProject, deleteProject, searchFocus, setSearchFocus } = useAppStore();
+  const { projects, tasks, addProject, updateProject, deleteProject, updateTask, searchFocus, setSearchFocus } = useAppStore();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newProject, setNewProject] = useState({ name: '', status: 'Planning', dueDate: '', description: '' });
@@ -106,8 +106,11 @@ export default function ProjectsView() {
       formattedDate = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     }
 
+    const oldName = editingProject.name;
+    const newName = editProjectForm.name.trim();
+
     const updates = {
-      name: editProjectForm.name.trim(),
+      name: newName,
       description: editProjectForm.description.trim(),
       status: editProjectForm.status,
       dueDate: formattedDate,
@@ -115,6 +118,14 @@ export default function ProjectsView() {
     };
 
     await updateProject(editingProject.id, updates);
+
+    // Cascade update to all tasks linked to this project (preserves linkage even if renamed)
+    if (oldName !== newName) {
+      const affectedTasks = tasks.filter(t => t.projectId === editingProject.id || t.project === oldName);
+      for (const t of affectedTasks) {
+        updateTask(t.id, { project: newName, projectId: editingProject.id });
+      }
+    }
 
     if (detailProject && detailProject.id === editingProject.id) {
       setDetailProject({
@@ -212,7 +223,7 @@ export default function ProjectsView() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredProjects.map(project => {
-              const projectTasks = tasks.filter(t => t.project === project.name);
+              const projectTasks = tasks.filter(t => t.projectId === project.id || t.project === project.name);
               const completedTasks = projectTasks.filter(t => t.status === 'completed').length;
               const computedProgress = projectTasks.length > 0 
                 ? Math.round((completedTasks / projectTasks.length) * 100) 
@@ -314,7 +325,7 @@ export default function ProjectsView() {
 
       {/* Project Detail Side Panel */}
       {detailProject && (() => {
-        const projectTasks = tasks.filter(t => t.project === detailProject.name);
+        const projectTasks = tasks.filter(t => t.projectId === detailProject.id || t.project === detailProject.name);
         const completedCount = projectTasks.filter(t => t.status === 'completed').length;
         const progress = projectTasks.length > 0 ? Math.round((completedCount / projectTasks.length) * 100) : detailProject.progress;
 

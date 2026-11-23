@@ -15,10 +15,21 @@ service firebase.storage {
   match /b/{bucket}/o {
 
     function signedIn() { return request.auth != null; }
-    // Removed cross-service lookup for orgId to prevent IAM permission issues in development.
-    // Ensure you secure this in production with proper IAM roles or custom claims.
-    function inOrg(orgId) { return signedIn(); }
-    function isManager() { return signedIn(); }
+    function profile() {
+      return firestore.get(/databases/(default)/documents/team/$(request.auth.uid)).data;
+    }
+    function inOrg(orgId) {
+      return signedIn() && (
+        (request.auth.token.keys().hasAll(['organizationId']) && request.auth.token.organizationId == orgId) ||
+        profile().organizationId == orgId
+      );
+    }
+    function isManager() {
+      return signedIn() && (
+        (request.auth.token.keys().hasAll(['role']) && request.auth.token.role in ['Owner', 'Admin']) ||
+        profile().role in ['Owner', 'Admin']
+      );
+    }
 
     // Shared documents: max 25 MB (mirrors MAX_UPLOAD_BYTES in DocumentsView.tsx).
     match /orgs/{orgId}/documents/{fileName} {

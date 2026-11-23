@@ -3,7 +3,8 @@ import {
   Mic, Square, Play, Pause, Video, Users, FileText, Sparkles,
   CheckCircle2, Clock, Calendar,
   Plus, ArrowLeft, Trash2, Search, ChevronRight, Check, X,
-  Pencil, AlertCircle, Copy, Key, Volume2, RefreshCw, Wand2
+  Pencil, AlertCircle, Copy, Key, Volume2, RefreshCw, Wand2,
+  Share2, Printer
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -447,6 +448,7 @@ function MeetingDetail({ meeting, onBack }: { meeting: Meeting; onBack: () => vo
 
   // AI Modal
   const [showAiModal, setShowAiModal] = useState(false);
+  const [showPrintModal, setShowPrintModal] = useState(false);
   const [apiKeyInput, setApiKeyInput] = useState(() => getGeminiApiKey());
   const [hasApiKey, setHasApiKey] = useState(() => Boolean(getGeminiApiKey()));
 
@@ -917,7 +919,28 @@ function MeetingDetail({ meeting, onBack }: { meeting: Meeting; onBack: () => vo
     }
   };
 
-  // ─── Notion Format Copy ───────────────────────────────────────────────────
+  // ─── Notion & WhatsApp & PDF Format Exports ───────────────────────────────────
+
+  const handleShareWhatsApp = () => {
+    const actionText = actionItems.length > 0 
+      ? actionItems.map((a, i) => `${i + 1}. *${a.task}* (PJ: @${a.assignee}, Tenggat: ${a.deadline})`).join('\n')
+      : '- Tidak ada tugas lanjutan.';
+    const decisionText = decisions.length > 0 
+      ? decisions.map((d, i) => `${i + 1}. ${d}`).join('\n')
+      : '- Tidak ada keputusan khusus.';
+    
+    const text = `📋 *NOTULA RESMI RAPAT PANITIA MILAD 200*\n` +
+      `📌 *Agenda*: ${meeting.title}\n` +
+      `📅 *Waktu*: ${meeting.date} (${meeting.startTime} - ${meeting.endTime})\n` +
+      `👤 *Penyelenggara*: ${meeting.organizer || 'Panitia'}\n` +
+      `👥 *Peserta*: ${(meeting.participants || []).join(', ') || '-'}\n\n` +
+      `📝 *RINGKASAN EKSEKUTIF*:\n${summary || 'Belum ada ringkasan.'}\n\n` +
+      `✅ *KEPUTUSAN DISEPAKATI*:\n${decisionText}\n\n` +
+      `📌 *ACTION ITEMS / TUGAS LANJUTAN*:\n${actionText}\n\n` +
+      `_Dihasilkan secara otomatis melalui Workspace Kepanitiaan Milad 200_`;
+
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+  };
 
   const handleCopyNotionMarkdown = () => {
     const md = formatNotionMarkdown(
@@ -1024,10 +1047,28 @@ function MeetingDetail({ meeting, onBack }: { meeting: Meeting; onBack: () => vo
           </div>
 
           <div className="flex items-center gap-2 flex-wrap self-end md:self-center">
+            {/* WhatsApp Share Button */}
+            <button
+              onClick={handleShareWhatsApp}
+              className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 px-3 py-2 rounded-xl transition-all shadow-xs cursor-pointer"
+              title="Bagikan notula rapat ke WhatsApp"
+            >
+              <Share2 size={13} className="text-emerald-600" /> Share WA
+            </button>
+
+            {/* Print Official PDF Button */}
+            <button
+              onClick={() => setShowPrintModal(true)}
+              className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 px-3 py-2 rounded-xl transition-all shadow-xs cursor-pointer"
+              title="Cetak atau simpan notula resmi sebagai PDF"
+            >
+              <Printer size={13} className="text-primary-600" /> Cetak PDF
+            </button>
+
             {/* Notion Copy Button */}
             <button
               onClick={handleCopyNotionMarkdown}
-              className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 px-3 py-2 rounded-xl transition-all shadow-xs"
+              className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 px-3 py-2 rounded-xl transition-all shadow-xs cursor-pointer"
               title="Salin notulen dalam format Markdown Notion"
             >
               <Copy size={13} className="text-indigo-600" /> Salin Notion
@@ -1789,6 +1830,168 @@ function MeetingDetail({ meeting, onBack }: { meeting: Meeting; onBack: () => vo
               >
                 Simpan Kunci
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL CETAK NOTULA RESMI (PDF READY) ─── */}
+      {showPrintModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden my-8 animate-in fade-in zoom-in duration-200">
+            {/* Modal Toolbar */}
+            <div className="bg-slate-800 text-white px-6 py-3 flex items-center justify-between print:hidden">
+              <div className="flex items-center gap-2">
+                <Printer size={16} className="text-primary-400" />
+                <span className="text-sm font-bold">Pratinjau Cetak Notula Resmi</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="bg-primary-600 hover:bg-primary-500 text-white px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Printer size={13} /> Cetak / Simpan PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowPrintModal(false)}
+                  className="p-1 text-slate-400 hover:text-white rounded-lg transition-colors cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* Document Printable Area */}
+            <div id="official-meeting-doc" className="p-8 md:p-12 text-slate-900 bg-white font-serif max-h-[75vh] overflow-y-auto print:max-h-none print:overflow-visible custom-scrollbar">
+              {/* Formal Header / Kop Surat */}
+              <div className="text-center border-b-2 border-slate-900 pb-4 mb-6 font-sans">
+                <h1 className="text-xl md:text-2xl font-black uppercase tracking-wider text-slate-900">
+                  PANITIA PERINGATAN 2 ABAD & MILAD 200 TAHUN
+                </h1>
+                <p className="text-xs uppercase tracking-widest text-slate-600 font-semibold mt-0.5">
+                  Sekretariat Utama Panitia Pelaksana · Gedung Pusat Informasi Milad
+                </p>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Email: sekretariat@milad200.org · Telp/WA: +62 812-3456-7890
+                </p>
+              </div>
+
+              {/* Document Title */}
+              <div className="text-center mb-6 font-sans">
+                <h2 className="text-base font-bold uppercase tracking-wide underline underline-offset-4">
+                  BERITA ACARA & NOTULA RAPAT KOORDINASI
+                </h2>
+                <p className="text-xs text-slate-600 mt-1 font-mono">
+                  No. Dokumen: NR/M200/{meeting.id.slice(-6).toUpperCase()}/{new Date().getFullYear()}
+                </p>
+              </div>
+
+              {/* Metadata Table */}
+              <div className="mb-6 font-sans text-xs">
+                <table className="w-full border-collapse">
+                  <tbody>
+                    <tr className="border-b border-slate-200">
+                      <td className="py-1.5 font-bold w-36 text-slate-700">Agenda Rapat</td>
+                      <td className="py-1.5 font-semibold text-slate-900">: {meeting.title}</td>
+                    </tr>
+                    <tr className="border-b border-slate-200">
+                      <td className="py-1.5 font-bold text-slate-700">Hari / Tanggal</td>
+                      <td className="py-1.5 text-slate-900">: {meeting.date}</td>
+                    </tr>
+                    <tr className="border-b border-slate-200">
+                      <td className="py-1.5 font-bold text-slate-700">Waktu & Tempat</td>
+                      <td className="py-1.5 text-slate-900">: {meeting.startTime} - {meeting.endTime} WIB ({meeting.location || 'Ruang Rapat Utama'})</td>
+                    </tr>
+                    <tr className="border-b border-slate-200">
+                      <td className="py-1.5 font-bold text-slate-700">Pimpinan Rapat</td>
+                      <td className="py-1.5 text-slate-900">: {meeting.chairperson || meeting.organizer || 'Ketua Panitia'}</td>
+                    </tr>
+                    <tr className="border-b border-slate-200">
+                      <td className="py-1.5 font-bold text-slate-700">Notulis / Sekretaris</td>
+                      <td className="py-1.5 text-slate-900">: {meeting.secretary || defaultSpeaker || 'Sekretaris'}</td>
+                    </tr>
+                    <tr>
+                      <td className="py-1.5 font-bold text-slate-700 align-top">Peserta Hadir</td>
+                      <td className="py-1.5 text-slate-900">: {(meeting.participants || []).join(', ') || 'Seluruh panitia terlampir'}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Executive Summary */}
+              <div className="mb-6">
+                <h3 className="font-sans text-xs font-bold uppercase tracking-wider text-slate-800 border-b border-slate-300 pb-1 mb-2">
+                  I. RINGKASAN PEMBAHASAN
+                </h3>
+                <p className="text-xs leading-relaxed text-slate-800 text-justify">
+                  {summary || 'Belum ada ringkasan tertulis untuk agenda rapat ini.'}
+                </p>
+              </div>
+
+              {/* Decisions */}
+              <div className="mb-6">
+                <h3 className="font-sans text-xs font-bold uppercase tracking-wider text-slate-800 border-b border-slate-300 pb-1 mb-2">
+                  II. KEPUTUSAN YANG DISEPAKATI
+                </h3>
+                {decisions.length > 0 ? (
+                  <ol className="list-decimal pl-5 text-xs text-slate-800 space-y-1">
+                    {decisions.map((d, i) => (
+                      <li key={i} className="leading-relaxed">{d}</li>
+                    ))}
+                  </ol>
+                ) : (
+                  <p className="text-xs text-slate-500 italic">Tidak ada poin keputusan khusus.</p>
+                )}
+              </div>
+
+              {/* Action Items */}
+              <div className="mb-8">
+                <h3 className="font-sans text-xs font-bold uppercase tracking-wider text-slate-800 border-b border-slate-300 pb-1 mb-2">
+                  III. RENCANA TINDAK LANJUT (ACTION ITEMS)
+                </h3>
+                {actionItems.length > 0 ? (
+                  <table className="w-full font-sans text-xs border border-slate-300 text-left">
+                    <thead className="bg-slate-100 border-b border-slate-300 font-bold text-slate-700">
+                      <tr>
+                        <th className="p-2 w-8 text-center">No</th>
+                        <th className="p-2">Uraian Tugas Lanjutan</th>
+                        <th className="p-2 w-36">Penanggung Jawab</th>
+                        <th className="p-2 w-28">Tenggat Waktu</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200">
+                      {actionItems.map((item, idx) => (
+                        <tr key={item.id}>
+                          <td className="p-2 text-center text-slate-600">{idx + 1}</td>
+                          <td className="p-2 font-medium text-slate-800">{item.task}</td>
+                          <td className="p-2 text-slate-700">{item.assignee}</td>
+                          <td className="p-2 text-slate-700">{item.deadline}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <p className="text-xs text-slate-500 italic">Tidak ada penugasan lanjutan.</p>
+                )}
+              </div>
+
+              {/* Signatures */}
+              <div className="font-sans text-xs pt-4 border-t border-slate-200">
+                <div className="flex justify-between items-end text-center px-8">
+                  <div>
+                    <p className="text-slate-600 mb-16">Notulis Rapat,</p>
+                    <p className="font-bold underline text-slate-900">{meeting.secretary || defaultSpeaker || 'Sekretaris'}</p>
+                    <p className="text-[10px] text-slate-500">Sekretaris Panitia</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-600 mb-16">Pimpinan Rapat / Ketua,</p>
+                    <p className="font-bold underline text-slate-900">{meeting.chairperson || meeting.organizer || 'Ketua Panitia'}</p>
+                    <p className="text-[10px] text-slate-500">Ketua Panitia Milad 200</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

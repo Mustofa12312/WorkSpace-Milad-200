@@ -23,7 +23,10 @@ import {
   Minus,
   Check,
   Filter,
-  Eye
+  Eye,
+  Send,
+  ExternalLink,
+  Link as LinkIcon
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -160,6 +163,10 @@ export default function KanbanBoard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('All');
   const [newChecklistText, setNewChecklistText] = useState('');
+  const [newCommentText, setNewCommentText] = useState('');
+  const [newAttachmentName, setNewAttachmentName] = useState('');
+  const [newAttachmentUrl, setNewAttachmentUrl] = useState('');
+  const [isAddingAttachment, setIsAddingAttachment] = useState(false);
 
   // Handle global search focus
   useEffect(() => {
@@ -226,6 +233,7 @@ export default function KanbanBoard() {
         id: `task-${Date.now()}`,
         title: newTask.title.trim(),
         project: projectName, // Save the actual project name
+        projectId: selectedProject ? selectedProject.id : undefined,
         priority: newTask.priority as Priority,
         status: newTask.status,
         dueDate: formattedDate,
@@ -277,6 +285,7 @@ export default function KanbanBoard() {
       title: editForm.title.trim(),
       description: editForm.description.trim(),
       project: projectName,
+      projectId: selectedProject ? selectedProject.id : (editingTask.projectId || undefined),
       priority: editForm.priority,
       status: editForm.status,
       dueDate: formattedDate,
@@ -321,6 +330,71 @@ export default function KanbanBoard() {
     const updatedList = currentList.filter(c => c.id !== itemId);
     await updateTask(detailTask.id, { checklist: updatedList });
     setDetailTask({ ...detailTask, checklist: updatedList });
+  };
+
+  const handleAddComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!detailTask || !newCommentText.trim()) return;
+
+    const newComment = {
+      id: `comment-${Date.now()}`,
+      author: currentUser?.name || 'Panitia',
+      avatar: currentUser?.avatar,
+      text: newCommentText.trim(),
+      createdAt: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+    };
+
+    const updatedComments = [...(detailTask.commentsList || []), newComment];
+    await updateTask(detailTask.id, {
+      commentsList: updatedComments,
+      comments: updatedComments.length
+    });
+    setDetailTask({
+      ...detailTask,
+      commentsList: updatedComments,
+      comments: updatedComments.length
+    });
+    setNewCommentText('');
+  };
+
+  const handleAddAttachment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!detailTask || !newAttachmentName.trim() || !newAttachmentUrl.trim()) return;
+
+    const newAtt = {
+      id: `att-${Date.now()}`,
+      name: newAttachmentName.trim(),
+      url: newAttachmentUrl.trim(),
+      createdAt: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
+    };
+
+    const updatedAttachments = [...(detailTask.attachmentsList || []), newAtt];
+    await updateTask(detailTask.id, {
+      attachmentsList: updatedAttachments,
+      attachments: updatedAttachments.length
+    });
+    setDetailTask({
+      ...detailTask,
+      attachmentsList: updatedAttachments,
+      attachments: updatedAttachments.length
+    });
+    setNewAttachmentName('');
+    setNewAttachmentUrl('');
+    setIsAddingAttachment(false);
+  };
+
+  const handleDeleteAttachment = async (attId: string) => {
+    if (!detailTask) return;
+    const updatedAttachments = (detailTask.attachmentsList || []).filter(a => a.id !== attId);
+    await updateTask(detailTask.id, {
+      attachmentsList: updatedAttachments,
+      attachments: updatedAttachments.length
+    });
+    setDetailTask({
+      ...detailTask,
+      attachmentsList: updatedAttachments,
+      attachments: updatedAttachments.length
+    });
   };
   
   // --- DND Kit Setup ---
@@ -866,6 +940,139 @@ export default function KanbanBoard() {
                   >
                     <Plus size={14} />
                     Tambah
+                  </button>
+                </form>
+              </div>
+
+              {/* ─── Task Attachments Section ─── */}
+              <div className="border-t border-slate-100 pt-5">
+                <div className="flex items-center justify-between mb-3">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                    <Paperclip size={13} className="text-primary-600" />
+                    Lampiran Berkas ({(detailTask.attachmentsList || []).length})
+                  </label>
+                  {!isAddingAttachment && (
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingAttachment(true)}
+                      className="text-xs font-semibold text-primary-600 hover:text-primary-700 flex items-center gap-1 cursor-pointer"
+                    >
+                      <Plus size={13} /> Tambah Lampiran
+                    </button>
+                  )}
+                </div>
+
+                {isAddingAttachment && (
+                  <form onSubmit={handleAddAttachment} className="bg-slate-50 border border-slate-200 rounded-xl p-3 mb-3 space-y-2 animate-in fade-in duration-150">
+                    <input
+                      type="text"
+                      required
+                      value={newAttachmentName}
+                      onChange={e => setNewAttachmentName(e.target.value)}
+                      placeholder="Nama file / tautan (misal: Dokumen Proposal)"
+                      className="w-full px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                    />
+                    <input
+                      type="url"
+                      required
+                      value={newAttachmentUrl}
+                      onChange={e => setNewAttachmentUrl(e.target.value)}
+                      placeholder="URL tautan (misal: https://drive.google.com/...)"
+                      className="w-full px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                    />
+                    <div className="flex gap-2 justify-end pt-1">
+                      <button
+                        type="button"
+                        onClick={() => { setIsAddingAttachment(false); setNewAttachmentName(''); setNewAttachmentUrl(''); }}
+                        className="px-3 py-1 text-xs text-slate-500 hover:bg-slate-200 rounded-lg"
+                      >
+                        Batal
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-3 py-1 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1"
+                      >
+                        <Plus size={12} /> Simpan Lampiran
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {(detailTask.attachmentsList || []).length === 0 && !isAddingAttachment ? (
+                  <p className="text-xs text-slate-400 italic">Belum ada lampiran pada tugas ini.</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {(detailTask.attachmentsList || []).map(att => (
+                      <div key={att.id} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200/60 hover:bg-white hover:border-slate-300 transition-all group">
+                        <a
+                          href={att.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 flex-1 min-w-0 text-slate-700 hover:text-primary-600"
+                        >
+                          <LinkIcon size={13} className="text-primary-500 flex-shrink-0" />
+                          <span className="text-xs font-semibold truncate">{att.name}</span>
+                          <ExternalLink size={11} className="text-slate-400 opacity-0 group-hover:opacity-100 flex-shrink-0" />
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteAttachment(att.id)}
+                          className="text-slate-400 hover:text-red-600 p-1 rounded-lg opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+                          title="Hapus lampiran"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* ─── Task Comments & Discussion Section ─── */}
+              <div className="border-t border-slate-100 pt-5">
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5 mb-3">
+                  <MessageSquare size={13} className="text-primary-600" />
+                  Diskusi & Komentar ({(detailTask.commentsList || []).length})
+                </label>
+
+                {/* Comments List */}
+                <div className="space-y-2.5 mb-3 max-h-52 overflow-y-auto custom-scrollbar pr-1">
+                  {(detailTask.commentsList || []).length === 0 ? (
+                    <p className="text-xs text-slate-400 italic">Belum ada komentar. Mulai koordinasi di sini.</p>
+                  ) : (
+                    (detailTask.commentsList || []).map(com => (
+                      <div key={com.id} className="p-3 bg-slate-50 rounded-xl border border-slate-200/60">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                            <span className="w-5 h-5 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center text-[9px] font-bold">
+                              {getAssigneeInitials(com.author)}
+                            </span>
+                            {com.author}
+                          </span>
+                          <span className="text-[10px] text-slate-400">{com.createdAt}</span>
+                        </div>
+                        <p className="text-xs text-slate-700 leading-relaxed pl-6.5">{com.text}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Add Comment Input */}
+                <form onSubmit={handleAddComment} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newCommentText}
+                    onChange={e => setNewCommentText(e.target.value)}
+                    placeholder="Tulis komentar atau progres tugas..."
+                    className="flex-1 px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!newCommentText.trim()}
+                    className="px-3.5 py-2 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold flex items-center gap-1 transition-all shadow-sm cursor-pointer"
+                  >
+                    <Send size={13} />
+                    Kirim
                   </button>
                 </form>
               </div>

@@ -154,6 +154,12 @@ service cloud.firestore {
       allow update, delete: if false; // Immutable
     }
 
+    match /organizations/{id} {
+      allow read: if signedIn();
+      allow create, update: if signedIn() && isManager();
+      allow delete: if signedIn() && isOwner();
+    }
+
     // Everything else is denied by default (no catch-all match).
   }
 }

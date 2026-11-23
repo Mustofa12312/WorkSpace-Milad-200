@@ -11,11 +11,18 @@ import {
   Copy, 
   Download, 
   AlertTriangle, 
-  UserCheck 
+  UserCheck,
+  User,
+  Lock,
+  Phone
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import toast from 'react-hot-toast';
+import { auth, db } from '../lib/firebase';
+import { updateProfile, updatePassword } from 'firebase/auth';
+import { doc, setDoc, updateDoc } from 'firebase/firestore';
+import { toAuthMessage } from '../lib/authErrors';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -24,8 +31,8 @@ function cn(...inputs: ClassValue[]) {
 import { useAppStore } from '../store/useAppStore';
 
 export default function Settings() {
-  const { orgName, setOrgName, currentUser, currentOrgId, tasks, projects, meetings, team, documents } = useAppStore();
-  const [activeTab, setActiveTab] = useState('general');
+  const { orgName, setOrgName, currentUser, setCurrentUser, currentOrgId, tasks, projects, meetings, team, documents } = useAppStore();
+  const [activeTab, setActiveTab] = useState('profile');
   const [tempName, setTempName] = useState(orgName);
   const [description, setDescription] = useState(
     () => localStorage.getItem('workspace_description') || 'Kepanitiaan Milad 200, mengurus segala persiapan acara.'
@@ -38,25 +45,124 @@ export default function Settings() {
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // User Profile state
+  const [profileName, setProfileName] = useState(currentUser?.name || '');
+  const [profilePhone, setProfilePhone] = useState(() => localStorage.getItem('user_phone') || '');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+
   // Notification toggles
   const [notifyTasks, setNotifyTasks] = useState(true);
   const [notifyMeetings, setNotifyMeetings] = useState(true);
   const [notifyDecisions, setNotifyDecisions] = useState(true);
   const [notifyTeam, setNotifyTeam] = useState(false);
 
-  const handleSave = () => {
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profileName.trim()) {
+      toast.error('Nama tidak boleh kosong');
+      return;
+    }
+    setIsUpdatingProfile(true);
+    try {
+      if (auth.currentUser) {
+        await updateProfile(auth.currentUser, { displayName: profileName.trim() });
+      }
+      if (currentUser?.id) {
+        await updateDoc(doc(db, 'team', currentUser.id), {
+          name: profileName.trim(),
+          phone: profilePhone.trim()
+        });
+      }
+      localStorage.setItem('user_phone', profilePhone.trim());
+      if (currentUser) {
+        setCurrentUser({ ...currentUser, name: profileName.trim() });
+      }
+      toast.success('Profil berhasil diperbarui!');
+    } catch (err) {
+      console.error(err);
+      toast.error('Gagal memperbarui profil');
+    } finally {
+      setIsUpdatingProfile(false);
+    }
+  };
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword.length < 6) {
+      toast.error('Kata sandi minimal 6 karakter');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error('Konfirmasi kata sandi tidak cocok');
+      return;
+    }
+    setIsUpdatingPassword(true);
+    try {
+      if (!auth.currentUser) throw new Error('Pengguna belum login');
+      await updatePassword(auth.currentUser, newPassword);
+      setNewPassword('');
+      setConfirmPassword('');
+      toast.success('Kata sandi berhasil diperbarui!');
+    } catch (err: unknown) {
+      console.error(err);
+      const code = (err as { code?: string })?.code;
+      if (code === 'auth/requires-recent-login') {
+        toast.error('Demi keamanan, silakan keluar dan masuk kembali sebelum mengubah kata sandi.');
+      } else {
+        toast.error(toAuthMessage(code, 'Gagal mengubah kata sandi'));
+      }
+    } finally {
+      setIsUpdatingPassword(false);
+    }
+  };
+
+  const handleSave = async () => {
     setOrgName(tempName);
     localStorage.setItem('workspace_description', description);
     localStorage.setItem('workspace_timezone', timezone);
     localStorage.setItem('workspace_language', language);
+
+    const orgId = currentUser?.organizationId || currentOrgId;
+    if (orgId) {
+      try {
+        await setDoc(doc(db, 'organizations', orgId), {
+          id: orgId,
+          name: tempName,
+          description,
+          timezone,
+          language,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      } catch (e) {
+        console.warn('Could not sync org doc to Firestore:', e);
+      }
+    }
+
     toast.success('Pengaturan berhasil disimpan!');
   };
 
-  const handleSaveBranding = () => {
+  const handleSaveBranding = async () => {
     localStorage.setItem('workspace_color', selectedColor);
     if (logoPreview) {
       localStorage.setItem('workspace_logo', logoPreview);
     }
+
+    const orgId = currentUser?.organizationId || currentOrgId;
+    if (orgId) {
+      try {
+        await setDoc(doc(db, 'organizations', orgId), {
+          color: selectedColor,
+          logo: logoPreview,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      } catch (e) {
+        console.warn('Could not sync branding doc to Firestore:', e);
+      }
+    }
+
     toast.success('Merek berhasil diperbarui!');
   };
 
@@ -136,6 +242,13 @@ export default function Settings() {
           <div className="w-full md:w-64 flex-shrink-0">
             <nav className="space-y-1">
               <button 
+                onClick={() => setActiveTab('profile')}
+                className={cn("w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors", activeTab === 'profile' ? "bg-white border border-slate-200 text-primary-600 shadow-sm" : "text-slate-600 hover:bg-slate-100")}
+              >
+                <User size={18} />
+                Profil Saya
+              </button>
+              <button 
                 onClick={() => setActiveTab('general')}
                 className={cn("w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors", activeTab === 'general' ? "bg-white border border-slate-200 text-primary-600 shadow-sm" : "text-slate-600 hover:bg-slate-100")}
               >
@@ -175,6 +288,105 @@ export default function Settings() {
 
           {/* Content Area */}
           <div className="flex-1 space-y-6">
+
+            {activeTab === 'profile' && (
+              <div className="space-y-6">
+                {/* Profile Information */}
+                <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                  <div className="flex items-center gap-4 border-b border-slate-100 pb-5 mb-5">
+                    <img 
+                      src={currentUser?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser?.name || 'User')}&background=6366f1&color=fff`} 
+                      alt="Avatar" 
+                      className="w-16 h-16 rounded-full border-2 border-indigo-100 shadow-sm"
+                    />
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-800">{currentUser?.name || 'User'}</h3>
+                      <p className="text-xs text-slate-500">{currentUser?.email} · <span className="font-semibold text-primary-600">{currentUser?.role || 'Member'}</span></p>
+                    </div>
+                  </div>
+
+                  <form onSubmit={handleUpdateProfile} className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Nama Lengkap</label>
+                      <input 
+                        type="text" 
+                        value={profileName}
+                        onChange={e => setProfileName(e.target.value)}
+                        required
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" 
+                        placeholder="Nama tampilan Anda"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Nomor WhatsApp / HP</label>
+                      <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus-within:ring-2 focus-within:ring-primary-500/20 focus-within:border-primary-500">
+                        <Phone size={15} className="text-slate-400 mr-2 flex-shrink-0" />
+                        <input 
+                          type="text" 
+                          value={profilePhone}
+                          onChange={e => setProfilePhone(e.target.value)}
+                          className="w-full bg-transparent border-none outline-none text-sm placeholder-slate-400" 
+                          placeholder="e.g., 081234567890 (untuk koordinasi panitia)"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="pt-2 flex justify-end">
+                      <button 
+                        type="submit"
+                        disabled={isUpdatingProfile}
+                        className="bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow-sm shadow-primary-500/30 transition-all cursor-pointer"
+                      >
+                        <Save size={16} /> {isUpdatingProfile ? 'Menyimpan...' : 'Perbarui Profil'}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+
+                {/* Change Password Form */}
+                <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                  <div className="flex items-center gap-2 border-b border-slate-100 pb-4 mb-5">
+                    <Lock size={18} className="text-primary-600" />
+                    <h3 className="text-base font-bold text-slate-800">Ubah Kata Sandi</h3>
+                  </div>
+
+                  <form onSubmit={handleUpdatePassword} className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Kata Sandi Baru</label>
+                      <input 
+                        type="password" 
+                        value={newPassword}
+                        onChange={e => setNewPassword(e.target.value)}
+                        placeholder="Minimal 6 karakter"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" 
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Konfirmasi Kata Sandi Baru</label>
+                      <input 
+                        type="password" 
+                        value={confirmPassword}
+                        onChange={e => setConfirmPassword(e.target.value)}
+                        placeholder="Ulangi kata sandi baru"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" 
+                      />
+                    </div>
+
+                    <div className="pt-2 flex justify-end">
+                      <button 
+                        type="submit"
+                        disabled={isUpdatingPassword || !newPassword}
+                        className="bg-slate-800 hover:bg-slate-900 disabled:opacity-50 text-white px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow-sm transition-all cursor-pointer"
+                      >
+                        <Lock size={15} /> {isUpdatingPassword ? 'Mengubah...' : 'Simpan Kata Sandi'}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
             
             {activeTab === 'general' && (
               <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">

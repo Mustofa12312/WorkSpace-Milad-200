@@ -4,11 +4,28 @@ export type MeetingStatus = 'scheduled' | 'ongoing' | 'completed' | 'cancelled';
 export type MeetingType = 'Regular' | 'Emergency' | 'Planning' | 'Evaluation' | 'Project' | 'Internal' | 'External';
 export type ApprovalStatus = 'Draft' | 'Review' | 'Revision Required' | 'Approved' | 'Archived';
 
+export interface TaskComment {
+  id: string;
+  author: string;
+  avatar?: string;
+  text: string;
+  createdAt: string;
+}
+
+export interface TaskAttachment {
+  id: string;
+  name: string;
+  url: string;
+  size?: string;
+  createdAt: string;
+}
+
 export interface Task {
   id: string;
   title: string;
   description?: string;
   project: string;
+  projectId?: string;
   priority: Priority;
   status: TaskStatus;
   dueDate: string;
@@ -16,6 +33,8 @@ export interface Task {
   attachments: number;
   assignee: string;
   checklist?: { id: string; text: string; done: boolean }[];
+  commentsList?: TaskComment[];
+  attachmentsList?: TaskAttachment[];
   organizationId?: string;
   createdAt?: string;
   meetingId?: string;

@@ -1,7 +1,24 @@
 import { useState, useRef, useEffect } from 'react';
-import { Search, UserPlus, MoreHorizontal, Mail, Shield, ShieldCheck, User, Clock, Trash2, Edit2, AlertCircle } from 'lucide-react';
+import { 
+  Search, 
+  UserPlus, 
+  MoreHorizontal, 
+  Mail, 
+  Shield, 
+  ShieldCheck, 
+  User, 
+  Clock, 
+  Trash2, 
+  Edit2, 
+  AlertCircle,
+  Copy,
+  Check,
+  Share2,
+  Send
+} from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import toast from 'react-hot-toast';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -17,6 +34,8 @@ export default function TeamManagement() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newMember, setNewMember] = useState({ email: '', role: 'Member' });
+  const [createdInvite, setCreatedInvite] = useState<{ email: string; role: string; link: string } | null>(null);
+  const [copiedLink, setCopiedLink] = useState(false);
   
   // Kebab Menu State
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
@@ -86,14 +105,32 @@ export default function TeamManagement() {
     return matchesSearch && matchesRole && matchesStatus;
   });
 
+  const handleCopyLink = (link: string) => {
+    navigator.clipboard.writeText(link);
+    setCopiedLink(true);
+    toast.success('Tautan undangan berhasil disalin!');
+    setTimeout(() => setCopiedLink(false), 2000);
+  };
+
+  const handleShareWhatsApp = (email: string, role: string, link: string) => {
+    const text = `Assalamu'alaikum Warahmatullahi Wabarakatuh,\n\nAnda diundang bergabung ke Workspace Kepanitiaan Milad 200 sebagai *${role}* (${email}).\n\nSilakan klik tautan di bawah ini untuk mengaktifkan akun Anda:\n${link}\n\nTerima kasih.`;
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+  };
+
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMember.email || newMember.email.trim() === '') return;
     
     try {
-      await createInvitation(newMember.email, newMember.role);
+      const inviteId = await createInvitation(newMember.email, newMember.role);
+      const link = `${window.location.origin}/auth?inviteId=${inviteId}`;
       setIsModalOpen(false);
       setNewMember({ email: '', role: 'Member' });
+      setCreatedInvite({
+        email: newMember.email,
+        role: newMember.role,
+        link,
+      });
     } catch (error) {
       console.error(error);
     }
@@ -328,7 +365,32 @@ export default function TeamManagement() {
                     </button>
                     
                     {activeMenuId === member.id && (
-                      <div ref={menuRef} className="absolute right-6 top-10 mt-1 w-48 bg-white border border-slate-200 rounded-xl shadow-lg py-1 z-10 animate-in fade-in zoom-in-95 duration-100">
+                      <div ref={menuRef} className="absolute right-6 top-10 mt-1 w-52 bg-white border border-slate-200 rounded-xl shadow-lg py-1 z-10 animate-in fade-in zoom-in-95 duration-100">
+                        {member.id.startsWith('inv-') && (
+                          <>
+                            <button 
+                              onClick={() => {
+                                setActiveMenuId(null);
+                                handleCopyLink(`${window.location.origin}/auth?inviteId=${member.id}`);
+                              }}
+                              className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                            >
+                              <Copy size={15} className="text-slate-400" />
+                              Salin Tautan Undangan
+                            </button>
+                            <button 
+                              onClick={() => {
+                                setActiveMenuId(null);
+                                handleShareWhatsApp(member.email, member.role || 'Member', `${window.location.origin}/auth?inviteId=${member.id}`);
+                              }}
+                              className="w-full text-left px-4 py-2 text-sm text-emerald-600 hover:bg-emerald-50 flex items-center gap-2 font-medium"
+                            >
+                              <Share2 size={15} />
+                              Bagikan ke WhatsApp
+                            </button>
+                            <hr className="my-1 border-slate-100" />
+                          </>
+                        )}
                         {!member.id.startsWith('inv-') && (
                           <button 
                             onClick={() => {
@@ -349,7 +411,7 @@ export default function TeamManagement() {
                           className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 font-medium"
                         >
                           <Trash2 size={16} />
-                          Keluarkan dari Tim
+                          {member.id.startsWith('inv-') ? 'Batalkan Undangan' : 'Keluarkan dari Tim'}
                         </button>
                       </div>
                     )}
@@ -472,6 +534,66 @@ export default function TeamManagement() {
                   className="flex-1 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-xl transition-colors shadow-sm shadow-primary-600/30 outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
                 >
                   Simpan Perubahan
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Invitation Dialog with Link & WhatsApp Share */}
+      {createdInvite && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-6 text-center">
+              <div className="w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4 text-emerald-600">
+                <Check size={28} />
+              </div>
+              <h3 className="text-xl font-bold text-slate-800 mb-1">Undangan Berhasil Dibuat!</h3>
+              <p className="text-xs text-slate-500 mb-5">
+                Undangan untuk <strong className="text-slate-700">{createdInvite.email}</strong> sebagai <span className="font-semibold text-primary-600">{createdInvite.role}</span> telah siap dibagikan.
+              </p>
+
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 mb-5 text-left">
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Tautan Undangan</label>
+                <div className="flex items-center gap-2">
+                  <input 
+                    type="text" 
+                    readOnly 
+                    value={createdInvite.link} 
+                    className="flex-1 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 font-mono select-all outline-none" 
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleCopyLink(createdInvite.link)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer",
+                      copiedLink 
+                        ? "bg-emerald-600 text-white" 
+                        : "bg-slate-200 hover:bg-slate-300 text-slate-700"
+                    )}
+                  >
+                    {copiedLink ? <Check size={13} /> : <Copy size={13} />}
+                    {copiedLink ? 'Tersalin' : 'Salin'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-2.5">
+                <button
+                  type="button"
+                  onClick={() => handleShareWhatsApp(createdInvite.email, createdInvite.role, createdInvite.link)}
+                  className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl text-sm flex items-center justify-center gap-2 shadow-sm shadow-emerald-600/30 transition-all cursor-pointer"
+                >
+                  <Send size={15} />
+                  Kirim Undangan via WhatsApp
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCreatedInvite(null)}
+                  className="w-full py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl text-sm transition-colors cursor-pointer"
+                >
+                  Tutup
                 </button>
               </div>
             </div>
