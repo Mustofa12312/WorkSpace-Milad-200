@@ -8,7 +8,7 @@ function cn(...inputs: ClassValue[]) {
 import { useAppStore } from '../store/useAppStore';
 import { auth } from '../lib/firebase';
 import { signOut } from 'firebase/auth';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import KanbanBoard from '../components/KanbanBoard';
 import MeetingRoom from '../components/MeetingRoom';
 import TeamManagement from '../components/TeamManagement';
@@ -43,10 +43,42 @@ import {
   Sparkles,
   Gavel,
   ListTodo,
+  WifiOff,
 } from 'lucide-react';
 
+const VALID_TABS = ['dashboard', 'tasks', 'meetings', 'team', 'projects', 'decisions', 'calendar', 'agenda', 'documents', 'settings'] as const;
+type TabType = typeof VALID_TABS[number];
+
 export default function DashboardLayout() {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const rawTab = searchParams.get('tab');
+  const activeTab: TabType = (rawTab && (VALID_TABS as readonly string[]).includes(rawTab)) ? (rawTab as TabType) : 'dashboard';
+
+  const setActiveTab = (tab: string) => {
+    const valid = (VALID_TABS as readonly string[]).includes(tab) ? (tab as TabType) : 'dashboard';
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (valid === 'dashboard') {
+        next.delete('tab');
+      } else {
+        next.set('tab', valid);
+      }
+      return next;
+    }, { replace: false });
+  };
+
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -178,7 +210,7 @@ export default function DashboardLayout() {
       let badge = { text: `${diffDays} Hari Lagi`, color: 'bg-emerald-100 text-emerald-700' };
       if (diffDays === 0) badge = { text: 'Hari Ini', color: 'bg-rose-100 text-rose-700' };
       else if (diffDays === 1) badge = { text: 'Besok', color: 'bg-amber-100 text-amber-700' };
-      else if (diffDays < 0) badge = { text: 'Terlewat', color: 'bg-slate-100 text-slate-600' };
+      else if (diffDays < 0) badge = { text: 'Terlewat', color: 'bg-rose-100 text-rose-700' };
 
       items.push({
         id: `e-${e.id}`,
@@ -295,6 +327,14 @@ export default function DashboardLayout() {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* Offline Network Warning Banner */}
+        {isOffline && (
+          <div className="bg-amber-600 text-white text-xs font-semibold py-1.5 px-4 text-center flex items-center justify-center gap-2 shadow-sm z-50 animate-in fade-in">
+            <WifiOff size={14} />
+            <span>Koneksi terputus. Mode offline aktif — data yang telah dimuat tetap dapat diakses.</span>
+          </div>
+        )}
+
         {/* Header */}
         <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-6 flex-shrink-0">
           <div className="flex items-center gap-3">
@@ -316,12 +356,13 @@ export default function DashboardLayout() {
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Quick action */}
+            {/* Quick action: accessible on mobile as icon button, full pill on desktop */}
             <button
               onClick={() => setIsCmdOpen(true)}
-              className="hidden md:flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-full text-sm font-medium transition-all shadow-sm hover:shadow-md"
+              className="flex items-center gap-1.5 bg-primary-600 hover:bg-primary-700 text-white p-2.5 md:px-4 md:py-2 rounded-xl md:rounded-full text-sm font-medium transition-all shadow-sm hover:shadow-md active:scale-95"
+              title="Buat Baru / Perintah Cepat"
             >
-              <Plus size={15} /> Buat Baru
+              <Plus size={16} /> <span className="hidden md:inline">Buat Baru</span>
             </button>
 
             <div className="relative" ref={notifRef}>

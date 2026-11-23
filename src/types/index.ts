@@ -81,6 +81,7 @@ export interface Document {
   owner: string;
   organizationId?: string;
   url?: string;
+  category?: string;
 }
 
 export interface Event {

@@ -3,7 +3,7 @@ import { useAppStore } from '../store/useAppStore';
 import type { Task, Meeting, Event } from '../types';
 import { format, differenceInDays, isTomorrow, isSameDay } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { CalendarClock, CheckSquare, CalendarDays, Calendar as CalendarIcon, Clock, MapPin, User, ArrowRight } from 'lucide-react';
+import { CalendarClock, CheckSquare, CalendarDays, Calendar as CalendarIcon, Clock, MapPin, User, ArrowRight, AlertCircle } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { parseAnyDate, parseDueDateParts } from '../lib/dateUtils';
@@ -123,7 +123,12 @@ export default function AgendaView({ onNavigate }: AgendaViewProps) {
     }
 
     if (itemDate < today) {
-      return <span className="px-3 py-1 bg-slate-100 text-slate-500 font-bold rounded-full text-xs">Terlewat</span>;
+      return (
+        <span className="px-3 py-1 bg-rose-50 text-rose-700 border border-rose-200/60 font-bold rounded-full text-xs flex items-center gap-1 shadow-2xs">
+          <AlertCircle size={12} className="text-rose-500" />
+          Terlewat
+        </span>
+      );
     }
 
     const diff = differenceInDays(itemDate, today);
@@ -226,7 +231,7 @@ export default function AgendaView({ onNavigate }: AgendaViewProps) {
                   <div className="flex items-center">
                     {getDaysBadge(item.dateObj)}
                   </div>
-                  <div className="text-xs font-medium text-primary-600 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 mt-auto">
+                  <div className="text-xs font-semibold text-primary-600 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex items-center gap-1 mt-auto">
                     <span>Lihat detail</span>
                     <ArrowRight size={13} />
                   </div>

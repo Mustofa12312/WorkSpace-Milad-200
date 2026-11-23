@@ -272,7 +272,32 @@ export default function TeamManagement() {
                       <MoreHorizontal size={18} />
                     </button>
                     {activeMenuId === member.id && (
-                      <div ref={menuRef} className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-lg py-1 z-10 animate-in fade-in zoom-in-95 duration-100">
+                      <div ref={menuRef} className="absolute right-0 mt-2 w-52 bg-white border border-slate-200 rounded-xl shadow-lg py-1 z-10 animate-in fade-in zoom-in-95 duration-100">
+                        {member.id.startsWith('inv-') && (
+                          <>
+                            <button 
+                              onClick={() => {
+                                setActiveMenuId(null);
+                                handleCopyLink(`${window.location.origin}/auth?inviteId=${member.id}`);
+                              }}
+                              className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                            >
+                              <Copy size={15} className="text-slate-400" />
+                              Salin Tautan Undangan
+                            </button>
+                            <button 
+                              onClick={() => {
+                                setActiveMenuId(null);
+                                handleShareWhatsApp(member.email, member.role || 'Member', `${window.location.origin}/auth?inviteId=${member.id}`);
+                              }}
+                              className="w-full text-left px-4 py-2 text-sm text-emerald-600 hover:bg-emerald-50 flex items-center gap-2 font-medium"
+                            >
+                              <Share2 size={15} />
+                              Bagikan ke WhatsApp
+                            </button>
+                            <hr className="my-1 border-slate-100" />
+                          </>
+                        )}
                         {!member.id.startsWith('inv-') && (
                           <button 
                             onClick={() => {
