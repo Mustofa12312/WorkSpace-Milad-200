@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { 
   ChevronLeft, ChevronRight, Plus, Clock, LayoutGrid, List, MapPin, User, Tag, 
-  Pencil, Calendar as CalendarIcon, Trash2, X, CalendarDays, CheckSquare, ArrowRight, FolderKanban
+  Pencil, Calendar as CalendarIcon, Trash2, X, CalendarDays, CheckSquare, ArrowRight, FolderKanban, ExternalLink
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -185,7 +185,15 @@ export default function CalendarView({ onNavigate }: CalendarViewProps) {
     e.preventDefault();
     if (!newEvent.title || newEvent.title.trim() === '') return;
     
-    const evtColor = (newEvent.type.toLowerCase().includes('rapat') || newEvent.type.toLowerCase().includes('meeting')) ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200';
+    let evtColor = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+    const typeLower = (newEvent.type || '').toLowerCase();
+    if (typeLower.includes('rapat') || typeLower.includes('meeting')) {
+      evtColor = 'bg-indigo-50 text-indigo-700 border-indigo-200';
+    } else if (typeLower.includes('evaluasi')) {
+      evtColor = 'bg-amber-50 text-amber-700 border-amber-200';
+    } else if (typeLower.includes('lomba') || typeLower.includes('kompetisi')) {
+      evtColor = 'bg-purple-50 text-purple-700 border-purple-200';
+    }
 
     if (modalMode === 'edit' && selectedItem?.rawEvent && updateEvent) {
       updateEvent(selectedItem.rawEvent.id, {
@@ -274,6 +282,45 @@ export default function CalendarView({ onNavigate }: CalendarViewProps) {
       items: dayItems
     };
   });
+
+  const getItemModalTheme = (item: UnifiedCalendarItem) => {
+    if (item.sourceType === 'meeting') {
+      return {
+        headerBg: 'bg-gradient-to-br from-rose-600 via-rose-600 to-pink-700',
+        badgeBg: 'bg-white/20 text-white border-white/25',
+        badgeIcon: <CalendarDays size={13} className="text-white" />,
+        typeLabel: item.type || 'Rapat',
+      };
+    }
+    if (item.sourceType === 'task') {
+      return {
+        headerBg: 'bg-gradient-to-br from-indigo-600 via-indigo-600 to-blue-700',
+        badgeBg: 'bg-white/20 text-white border-white/25',
+        badgeIcon: <CheckSquare size={13} className="text-white" />,
+        typeLabel: item.type || 'Tugas',
+      };
+    }
+    // Event
+    const typeLower = (item.type || '').toLowerCase();
+    const colorStr = item.color || '';
+    let headerBg = 'bg-gradient-to-br from-emerald-600 via-emerald-600 to-teal-700';
+    if (typeLower.includes('evaluasi') || colorStr.includes('amber') || colorStr.includes('yellow')) {
+      headerBg = 'bg-gradient-to-br from-amber-600 via-amber-600 to-orange-700';
+    } else if (typeLower.includes('rapat') || colorStr.includes('indigo') || colorStr.includes('blue')) {
+      headerBg = 'bg-gradient-to-br from-indigo-600 via-indigo-600 to-blue-700';
+    } else if (colorStr.includes('purple') || colorStr.includes('violet') || typeLower.includes('lomba')) {
+      headerBg = 'bg-gradient-to-br from-purple-600 via-purple-600 to-indigo-700';
+    } else if (colorStr.includes('rose') || colorStr.includes('red')) {
+      headerBg = 'bg-gradient-to-br from-rose-600 via-rose-600 to-pink-700';
+    }
+
+    return {
+      headerBg,
+      badgeBg: 'bg-white/20 text-white border-white/25',
+      badgeIcon: <Tag size={13} className="text-white" />,
+      typeLabel: item.type || 'Acara',
+    };
+  };
 
   const renderItemIcon = (sourceType: CalendarSourceType) => {
     switch (sourceType) {
@@ -453,102 +500,157 @@ export default function CalendarView({ onNavigate }: CalendarViewProps) {
 
         {/* Modal */}
         {modalMode !== 'closed' && (
-          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+          <div 
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-150"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setModalMode('closed');
+            }}
+          >
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
               
-              {modalMode === 'view' && selectedItem ? (
+              {modalMode === 'view' && selectedItem ? (() => {
+                const theme = getItemModalTheme(selectedItem);
+                return (
                 <div>
-                  <div className={cn("p-6 relative", 
-                    selectedItem.sourceType === 'meeting' ? "bg-rose-600 text-white" :
-                    selectedItem.sourceType === 'task' ? "bg-indigo-600 text-white" :
-                    selectedItem.color || 'bg-slate-700 text-white'
-                  )}>
-                    <button onClick={() => setModalMode('closed')} className="absolute top-4 right-4 p-2 bg-black/10 hover:bg-black/20 rounded-full transition-colors backdrop-blur-md text-white">
-                      <X size={20} />
+                  <div className={cn("p-6 relative text-white overflow-hidden shadow-inner", theme.headerBg)}>
+                    {/* Background glow overlay */}
+                    <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+                    
+                    <button 
+                      onClick={() => setModalMode('closed')} 
+                      className="absolute top-4 right-4 w-9 h-9 flex items-center justify-center rounded-full bg-black/20 hover:bg-black/30 text-white backdrop-blur-md transition-all active:scale-95 shadow-2xs z-10"
+                      aria-label="Tutup"
+                    >
+                      <X size={18} />
                     </button>
-                    <div className="mb-3 inline-flex items-center gap-1.5 bg-black/20 px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-md text-white">
-                      {selectedItem.sourceType === 'meeting' && <CalendarDays size={13} />}
-                      {selectedItem.sourceType === 'task' && <CheckSquare size={13} />}
-                      {selectedItem.sourceType === 'event' && <Tag size={13} />}
-                      <span>{selectedItem.type || (selectedItem.sourceType === 'meeting' ? 'Rapat' : selectedItem.sourceType === 'task' ? 'Tugas' : 'Acara')}</span>
+
+                    <div className={cn("mb-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-md shadow-2xs border", theme.badgeBg)}>
+                      {theme.badgeIcon}
+                      <span>{theme.typeLabel}</span>
                     </div>
-                    <h3 className="text-2xl font-bold mb-2 leading-tight text-white">{selectedItem.title}</h3>
-                    <div className="flex flex-col gap-2 text-white/90 text-sm mt-4">
-                      <div className="flex items-center gap-2"><CalendarIcon size={16} className="opacity-75" /> {getFormattedDate(selectedItem.dateObj)}</div>
-                      <div className="flex items-center gap-2"><Clock size={16} className="opacity-75" /> {selectedItem.timeStr}</div>
+
+                    <h3 className="text-xl sm:text-2xl font-bold mb-2 leading-tight text-white drop-shadow-xs break-words">
+                      {selectedItem.title}
+                    </h3>
+
+                    <div className="flex flex-wrap items-center gap-2 text-white text-xs sm:text-sm font-medium mt-4">
+                      <div className="inline-flex items-center gap-1.5 bg-black/20 border border-white/15 px-3 py-1.5 rounded-xl backdrop-blur-md">
+                        <CalendarIcon size={14} className="text-white/85" />
+                        <span>{getFormattedDate(selectedItem.dateObj)}</span>
+                      </div>
+                      <div className="inline-flex items-center gap-1.5 bg-black/20 border border-white/15 px-3 py-1.5 rounded-xl backdrop-blur-md">
+                        <Clock size={14} className="text-white/85" />
+                        <span>{selectedItem.timeStr} WIB</span>
+                      </div>
                     </div>
                   </div>
                   
-                  <div className="p-6 space-y-4">
+                  <div className="p-5 sm:p-6 space-y-3.5">
                     {selectedItem.person && (
-                      <div className="flex items-start gap-4">
-                        <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 shrink-0"><User size={20} /></div>
-                        <div>
-                          <div className="text-xs text-slate-400 font-medium mb-0.5">
+                      <div className="flex items-start gap-3.5 p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                        <div className="w-10 h-10 rounded-xl bg-white shadow-2xs border border-slate-200/60 flex items-center justify-center text-primary-600 shrink-0">
+                          <User size={18} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider mb-0.5">
                             {selectedItem.sourceType === 'meeting' ? 'Penyelenggara' : selectedItem.sourceType === 'task' ? 'Penanggung Jawab' : 'Penyelenggara / PIC'}
                           </div>
-                          <div className="font-semibold text-slate-800">{selectedItem.person}</div>
+                          <div className="font-semibold text-slate-800 text-sm break-words">{selectedItem.person}</div>
                         </div>
                       </div>
                     )}
                     {selectedItem.location && (
-                      <div className="flex items-start gap-4">
-                        <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 shrink-0">
-                          {selectedItem.sourceType === 'task' ? <FolderKanban size={20} /> : <MapPin size={20} />}
+                      <div className="flex items-start gap-3.5 p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                        <div className="w-10 h-10 rounded-xl bg-white shadow-2xs border border-slate-200/60 flex items-center justify-center text-primary-600 shrink-0">
+                          {selectedItem.sourceType === 'task' ? <FolderKanban size={18} /> : <MapPin size={18} />}
                         </div>
-                        <div>
-                          <div className="text-xs text-slate-400 font-medium mb-0.5">
+                        <div className="min-w-0 flex-1">
+                          <div className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider mb-0.5">
                             {selectedItem.sourceType === 'task' ? 'Proyek' : 'Lokasi / Link'}
                           </div>
-                          <div className="font-semibold text-slate-800">{selectedItem.location}</div>
+                          {selectedItem.location.startsWith('http://') || selectedItem.location.startsWith('https://') ? (
+                            <a 
+                              href={selectedItem.location} 
+                              target="_blank" 
+                              rel="noreferrer" 
+                              className="font-semibold text-primary-600 hover:text-primary-700 text-sm hover:underline inline-flex items-center gap-1.5 break-all"
+                            >
+                              <span>{selectedItem.location}</span>
+                              <ExternalLink size={13} className="shrink-0" />
+                            </a>
+                          ) : (
+                            <div className="font-semibold text-slate-800 text-sm break-words">{selectedItem.location}</div>
+                          )}
                         </div>
                       </div>
                     )}
                     {(!selectedItem.person && !selectedItem.location) && (
-                      <div className="text-center text-slate-500 py-6 bg-slate-50 rounded-2xl border border-slate-100 border-dashed text-sm">Tidak ada detail tambahan.</div>
+                      <div className="text-center text-slate-400 py-6 bg-slate-50 rounded-2xl border border-slate-100 border-dashed text-xs font-medium">Tidak ada detail tambahan.</div>
                     )}
                   </div>
                   
-                  <div className="p-5 bg-slate-50/80 border-t border-slate-100 flex justify-between items-center gap-3">
+                  <div className="p-4 sm:p-5 bg-slate-50/90 border-t border-slate-100 flex items-center justify-between gap-2.5">
                     {selectedItem.sourceType === 'event' ? (
                       <>
-                        <button onClick={() => { if (selectedItem.rawEvent && deleteEvent) { deleteEvent(selectedItem.rawEvent.id); setModalMode('closed'); } }} className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors outline-none focus-visible:ring-2 focus-visible:ring-red-400" title="Hapus Acara">
-                          <Trash2 size={20} />
+                        <button 
+                          type="button"
+                          onClick={() => { if (selectedItem.rawEvent && deleteEvent) { deleteEvent(selectedItem.rawEvent.id); setModalMode('closed'); } }} 
+                          className="px-3.5 py-2.5 text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100/80 border border-red-200/60 rounded-xl transition-colors font-semibold text-xs sm:text-sm flex items-center gap-1.5 outline-none focus-visible:ring-2 focus-visible:ring-red-400" 
+                          title="Hapus Acara"
+                        >
+                          <Trash2 size={16} />
+                          <span className="hidden sm:inline">Hapus</span>
                         </button>
-                        <button onClick={handleEditClick} className="px-5 py-2.5 bg-white border border-slate-200 hover:border-primary-500 hover:text-primary-600 text-slate-700 font-bold rounded-xl transition-all shadow-sm flex items-center gap-2 text-sm">
-                          <Pencil size={16} /> Edit Acara
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button 
+                            type="button" 
+                            onClick={() => setModalMode('closed')} 
+                            className="px-4 py-2.5 text-slate-600 font-medium hover:bg-slate-200/60 rounded-xl transition-colors text-xs sm:text-sm"
+                          >
+                            Tutup
+                          </button>
+                          <button 
+                            type="button"
+                            onClick={handleEditClick} 
+                            className="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl transition-all shadow-sm shadow-primary-500/30 flex items-center gap-2 text-xs sm:text-sm active:scale-98"
+                          >
+                            <Pencil size={15} /> Edit Acara
+                          </button>
+                        </div>
                       </>
                     ) : selectedItem.sourceType === 'meeting' ? (
                       <>
-                        <button type="button" onClick={() => setModalMode('closed')} className="px-4 py-2.5 text-slate-600 font-medium hover:bg-slate-200/60 rounded-xl transition-colors text-sm">Tutup</button>
+                        <button type="button" onClick={() => setModalMode('closed')} className="px-4 py-2.5 text-slate-600 font-medium hover:bg-slate-200/60 rounded-xl transition-colors text-xs sm:text-sm">Tutup</button>
                         <button 
+                          type="button"
                           onClick={() => {
                             setModalMode('closed');
                             onNavigate?.('meetings');
                           }} 
-                          className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl transition-all shadow-sm shadow-rose-500/30 flex items-center gap-2 text-sm"
+                          className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl transition-all shadow-sm shadow-rose-500/30 flex items-center gap-2 text-xs sm:text-sm active:scale-98"
                         >
-                          Buka di Menu Rapat <ArrowRight size={16} />
+                          Buka di Menu Rapat <ArrowRight size={15} />
                         </button>
                       </>
                     ) : (
                       <>
-                        <button type="button" onClick={() => setModalMode('closed')} className="px-4 py-2.5 text-slate-600 font-medium hover:bg-slate-200/60 rounded-xl transition-colors text-sm">Tutup</button>
+                        <button type="button" onClick={() => setModalMode('closed')} className="px-4 py-2.5 text-slate-600 font-medium hover:bg-slate-200/60 rounded-xl transition-colors text-xs sm:text-sm">Tutup</button>
                         <button 
+                          type="button"
                           onClick={() => {
                             setModalMode('closed');
                             onNavigate?.('tasks');
                           }} 
-                          className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all shadow-sm shadow-indigo-500/30 flex items-center gap-2 text-sm"
+                          className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all shadow-sm shadow-indigo-500/30 flex items-center gap-2 text-xs sm:text-sm active:scale-98"
                         >
-                          Buka di Papan Tugas <ArrowRight size={16} />
+                          Buka di Papan Tugas <ArrowRight size={15} />
                         </button>
                       </>
                     )}
                   </div>
                 </div>
-              ) : (
+                );
+              })() : (
                 <>
                   <div className="p-6 border-b border-slate-100 flex justify-between items-center">
                     <h3 className="text-xl font-bold text-slate-800">{modalMode === 'edit' ? 'Edit Acara' : 'Tambah Acara Baru'}</h3>
@@ -557,33 +659,52 @@ export default function CalendarView({ onNavigate }: CalendarViewProps) {
                   <form onSubmit={handleNewEvent} className="p-6 space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1">Judul Acara</label>
-                      <input type="text" required value={newEvent.title} onChange={e => setNewEvent({...newEvent, title: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition-all text-sm" placeholder="e.g., Team Sync" />
+                      <input type="text" required value={newEvent.title} onChange={e => setNewEvent({...newEvent, title: e.target.value})} className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition-all text-sm font-medium text-slate-800" placeholder="e.g., Opening Milad 2 Abad" />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Tanggal</label>
-                        <input type="date" required value={newEvent.date} onChange={e => setNewEvent({...newEvent, date: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition-all text-sm" />
+                        <input type="date" required value={newEvent.date} onChange={e => setNewEvent({...newEvent, date: e.target.value})} className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition-all text-sm font-medium text-slate-800" />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Waktu</label>
-                        <input type="time" required value={newEvent.time} onChange={e => setNewEvent({...newEvent, time: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition-all text-sm" />
+                        <input type="time" required value={newEvent.time} onChange={e => setNewEvent({...newEvent, time: e.target.value})} className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition-all text-sm font-medium text-slate-800" />
                       </div>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Penanggung Jawab</label>
-                      <input type="text" value={newEvent.personInCharge} onChange={e => setNewEvent({...newEvent, personInCharge: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition-all text-sm" placeholder="e.g., Budi Santoso" />
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Penanggung Jawab / PIC</label>
+                      <input type="text" value={newEvent.personInCharge} onChange={e => setNewEvent({...newEvent, personInCharge: e.target.value})} className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition-all text-sm font-medium text-slate-800" placeholder="e.g., Panitia Milad" />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Lokasi</label>
-                      <input type="text" value={newEvent.location} onChange={e => setNewEvent({...newEvent, location: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition-all text-sm" placeholder="e.g., Ruang Rapat Lt. 2 atau Link Zoom" />
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Lokasi / Tautan</label>
+                      <input type="text" value={newEvent.location} onChange={e => setNewEvent({...newEvent, location: e.target.value})} className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition-all text-sm font-medium text-slate-800" placeholder="e.g., Halaman Tibyan atau Link Zoom" />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Tipe</label>
-                      <input list="type-options" type="text" value={newEvent.type} onChange={e => setNewEvent({...newEvent, type: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none bg-white transition-all text-sm" placeholder="Pilih atau ketik tipe acara" />
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Tipe Acara</label>
+                      <div className="flex flex-wrap gap-1.5 mb-2">
+                        {['Acara', 'Rapat', 'Lomba', 'Evaluasi'].map((cat) => (
+                          <button
+                            key={cat}
+                            type="button"
+                            onClick={() => setNewEvent({ ...newEvent, type: cat })}
+                            className={cn(
+                              "px-2.5 py-1 rounded-lg text-xs font-medium transition-all border",
+                              newEvent.type === cat
+                                ? "bg-primary-50 text-primary-700 border-primary-300 font-semibold shadow-2xs"
+                                : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
+                            )}
+                          >
+                            {cat}
+                          </button>
+                        ))}
+                      </div>
+                      <input list="type-options" type="text" value={newEvent.type} onChange={e => setNewEvent({...newEvent, type: e.target.value})} className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none bg-white transition-all text-sm font-medium text-slate-800" placeholder="Pilih atau ketik tipe acara" />
                       <datalist id="type-options">
+                        <option value="Acara" />
                         <option value="Rapat" />
-                        <option value="Tenggat Tugas" />
+                        <option value="Lomba" />
                         <option value="Evaluasi" />
+                        <option value="Tenggat Tugas" />
                       </datalist>
                     </div>
                     <div className="pt-4 flex gap-3 justify-end items-center">
