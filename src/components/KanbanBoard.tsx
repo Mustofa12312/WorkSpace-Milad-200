@@ -1,17 +1,17 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useAppStore, type Task, type TaskStatus, type Priority } from '../store/useAppStore';
-import { 
-  Plus, 
-  MoreHorizontal, 
-  Calendar, 
-  MessageSquare, 
-  Paperclip, 
-  Search, 
-  X, 
-  Trash2, 
-  CheckCircle2, 
-  GripVertical, 
-  Pencil, 
+import {
+  Plus,
+  MoreHorizontal,
+  Calendar,
+  MessageSquare,
+  Paperclip,
+  Search,
+  X,
+  Trash2,
+  CheckCircle2,
+  GripVertical,
+  Pencil,
   Clock,
   Lightbulb,
   ListTodo,
@@ -38,13 +38,13 @@ import { parseDueDateParts, formatTaskDueDate, isDueDateOverdue } from '../lib/d
 import toast from 'react-hot-toast';
 
 // DND Kit
-import { 
-  DndContext, 
-  DragOverlay, 
-  closestCorners, 
-  useSensor, 
-  useSensors, 
-  PointerSensor, 
+import {
+  DndContext,
+  DragOverlay,
+  closestCorners,
+  useSensor,
+  useSensors,
+  PointerSensor,
   TouchSensor,
   useDraggable,
   useDroppable,
@@ -68,50 +68,50 @@ function getAssigneeInitials(name?: string): string {
 }
 
 const COLUMNS = [
-  { 
-    id: 'backlog' as TaskStatus, 
-    title: 'Backlog', 
-    color: 'border-slate-200/80 bg-slate-50', 
+  {
+    id: 'backlog' as TaskStatus,
+    title: 'Backlog',
+    color: 'border-slate-200/80 bg-slate-50',
     iconBg: 'bg-slate-200/70 text-slate-700',
     iconColor: 'text-slate-600',
     badgeBg: 'bg-slate-200/80 text-slate-700',
-    icon: Lightbulb 
+    icon: Lightbulb
   },
-  { 
-    id: 'planned' as TaskStatus, 
-    title: 'Direncanakan', 
-    color: 'border-blue-200/80 bg-blue-50/70', 
+  {
+    id: 'planned' as TaskStatus,
+    title: 'Direncanakan',
+    color: 'border-blue-200/80 bg-blue-50/70',
     iconBg: 'bg-blue-100 text-blue-700',
     iconColor: 'text-blue-600',
     badgeBg: 'bg-blue-100 text-blue-700',
-    icon: ListTodo 
+    icon: ListTodo
   },
-  { 
-    id: 'in_progress' as TaskStatus, 
-    title: 'Berjalan', 
-    color: 'border-indigo-200/80 bg-indigo-50/70', 
+  {
+    id: 'in_progress' as TaskStatus,
+    title: 'Berjalan',
+    color: 'border-indigo-200/80 bg-indigo-50/70',
     iconBg: 'bg-indigo-100 text-indigo-700',
     iconColor: 'text-indigo-600',
     badgeBg: 'bg-indigo-100 text-indigo-700',
-    icon: Timer 
+    icon: Timer
   },
-  { 
-    id: 'review' as TaskStatus, 
-    title: 'Evaluasi', 
-    color: 'border-amber-200/80 bg-amber-50/70', 
+  {
+    id: 'review' as TaskStatus,
+    title: 'Evaluasi',
+    color: 'border-amber-200/80 bg-amber-50/70',
     iconBg: 'bg-amber-100 text-amber-700',
     iconColor: 'text-amber-600',
     badgeBg: 'bg-amber-100 text-amber-700',
-    icon: Sparkles 
+    icon: Sparkles
   },
-  { 
-    id: 'completed' as TaskStatus, 
-    title: 'Selesai', 
-    color: 'border-emerald-200/80 bg-emerald-50/70', 
+  {
+    id: 'completed' as TaskStatus,
+    title: 'Selesai',
+    color: 'border-emerald-200/80 bg-emerald-50/70',
     iconBg: 'bg-emerald-100 text-emerald-700',
     iconColor: 'text-emerald-600',
     badgeBg: 'bg-emerald-100 text-emerald-700',
-    icon: CheckCircle2 
+    icon: CheckCircle2
   },
 ];
 
@@ -123,32 +123,32 @@ const priorityConfig: Record<Priority, { bg: string; icon: typeof Minus }> = {
 };
 
 export default function KanbanBoard() {
-  const { 
-    tasks, 
-    updateTaskStatus, 
-    addTask, 
-    updateTask, 
-    deleteTask, 
-    projects, 
-    team, 
-    currentUser, 
-    searchFocus, 
+  const {
+    tasks,
+    updateTaskStatus,
+    addTask,
+    updateTask,
+    deleteTask,
+    projects,
+    team,
+    currentUser,
+    searchFocus,
     setSearchFocus,
     isCreateTaskModalOpen,
-    setCreateTaskModalOpen 
+    setCreateTaskModalOpen
   } = useAppStore();
-  
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [detailTask, setDetailTask] = useState<Task | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
-  const [newTask, setNewTask] = useState({ 
-    title: '', 
+  const [newTask, setNewTask] = useState({
+    title: '',
     description: '',
     projectId: '', // use empty string initially to prompt selection
-    priority: 'Medium' as Priority, 
-    status: 'backlog' as TaskStatus, 
+    priority: 'Medium' as Priority,
+    status: 'backlog' as TaskStatus,
     dueDate: '',
     dueTime: '',
     assignee: ''
@@ -164,7 +164,7 @@ export default function KanbanBoard() {
     dueTime: '',
     assignee: ''
   });
-  
+
   const getInitialProjectFilter = () => {
     if (typeof window !== 'undefined' && window.location) {
       const params = new URLSearchParams(window.location.search);
@@ -208,14 +208,14 @@ export default function KanbanBoard() {
       }
     }
   }, [searchFocus, tasks, setSearchFocus]);
-  
+
   const handleQuickAdd = useCallback((status: TaskStatus = 'backlog') => {
-    setNewTask({ 
-      title: '', 
+    setNewTask({
+      title: '',
       description: '',
-      projectId: projects.length > 0 ? projects[0].id : '', 
-      priority: 'Medium', 
-      status, 
+      projectId: projects.length > 0 ? projects[0].id : '',
+      priority: 'Medium',
+      status,
       dueDate: '',
       dueTime: '',
       assignee: currentUser?.name || (team.length > 0 ? team[0].name : 'M')
@@ -249,13 +249,13 @@ export default function KanbanBoard() {
   const handleSaveTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTask.title || newTask.title.trim() === '') return;
-    
+
     setIsSubmitting(true);
     try {
       const formattedDate = formatTaskDueDate(newTask.dueDate, newTask.dueTime);
       const selectedProject = projects.find(p => p.id === newTask.projectId);
       const projectName = selectedProject ? selectedProject.name : 'General';
-      
+
       const taskPayload: Task = {
         id: `task-${Date.now()}`,
         title: newTask.title.trim(),
@@ -274,7 +274,7 @@ export default function KanbanBoard() {
       }
 
       await addTask(taskPayload);
-      
+
       setIsModalOpen(false);
       setNewTask({ title: '', description: '', projectId: '', priority: 'Medium', status: 'backlog', dueDate: '', dueTime: '', assignee: '' });
     } catch (err) {
@@ -423,7 +423,7 @@ export default function KanbanBoard() {
       attachments: updatedAttachments.length
     });
   };
-  
+
   // --- DND Kit Setup ---
   const [activeTask, setActiveTask] = useState<Task | null>(null);
 
@@ -450,9 +450,9 @@ export default function KanbanBoard() {
   const handleDragEnd = (event: DragEndEvent) => {
     setActiveTask(null);
     const { active, over } = event;
-    
+
     if (!over) return;
-    
+
     const activeTaskId = active.id as string;
     const overColumnId = over.id as TaskStatus;
 
@@ -519,7 +519,7 @@ export default function KanbanBoard() {
       completed: 'Selesai'
     };
 
-    const text = 
+    const text =
       `📋 *TUGAS PANITIA MILAD 200*\n\n` +
       `📌 *Judul*: ${task.title}\n` +
       `📁 *Proyek*: ${task.project || 'Umum'}\n` +
@@ -535,9 +535,9 @@ export default function KanbanBoard() {
   // Filter tasks based on search, priority, project, and assignee
   const filteredTasks = tasks.filter(t => {
     const query = searchTerm.toLowerCase();
-    const matchesSearch = (t.title || '').toLowerCase().includes(query) || 
-                          (t.project || '').toLowerCase().includes(query) ||
-                          (t.assignee && t.assignee.toLowerCase().includes(query));
+    const matchesSearch = (t.title || '').toLowerCase().includes(query) ||
+      (t.project || '').toLowerCase().includes(query) ||
+      (t.assignee && t.assignee.toLowerCase().includes(query));
     const matchesPriority = priorityFilter === 'All' || t.priority === priorityFilter;
     const matchesProject = projectFilter === 'All' || t.projectId === projectFilter || t.project === projectFilter;
     const matchesAssignee = assigneeFilter === 'All' || t.assignee === assigneeFilter;
@@ -546,7 +546,7 @@ export default function KanbanBoard() {
 
   return (
     <div className="h-full flex flex-col p-4 md:p-8 overflow-hidden bg-slate-50/50">
-      
+
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between md:items-end mb-6 flex-shrink-0 gap-4">
         <div>
@@ -554,20 +554,20 @@ export default function KanbanBoard() {
           <p className="text-slate-500 mt-1 text-sm md:text-base">Kelola alur kerja tim Anda dan lacak perkembangannya.</p>
         </div>
         <div className="flex flex-col md:flex-row gap-2.5 items-stretch md:items-center w-full md:w-auto flex-wrap">
-          
+
           <div className="flex items-center bg-white rounded-xl px-3.5 py-2 w-full md:w-56 border border-slate-200 focus-within:ring-2 focus-within:ring-primary-500/20 shadow-xs transition-shadow">
             <Search size={15} className="text-slate-400 flex-shrink-0" />
-            <input 
-              type="text" 
-              placeholder="Cari tugas..." 
+            <input
+              type="text"
+              placeholder="Cari tugas..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="bg-transparent border-none outline-none ml-2 w-full text-xs md:text-sm placeholder-slate-400 text-slate-800"
             />
             {searchTerm && (
-              <button 
-                type="button" 
-                onClick={() => setSearchTerm('')} 
+              <button
+                type="button"
+                onClick={() => setSearchTerm('')}
                 className="text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer"
                 title="Hapus pencarian"
               >
@@ -636,7 +636,7 @@ export default function KanbanBoard() {
           </div>
 
           <div className="flex gap-2 w-full md:w-auto">
-            <button 
+            <button
               onClick={() => handleQuickAdd('backlog')}
               className="flex-1 md:flex-none bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-xl text-xs md:text-sm font-semibold flex items-center justify-center gap-1.5 shadow-sm shadow-primary-500/30 transition-all hover:-translate-y-0.5 outline-none focus-visible:ring-2 focus-visible:ring-primary-500 active:scale-98"
             >
@@ -648,7 +648,7 @@ export default function KanbanBoard() {
       </div>
 
       {/* Kanban Columns */}
-      <DndContext 
+      <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
         onDragStart={handleDragStart}
@@ -658,10 +658,10 @@ export default function KanbanBoard() {
           {COLUMNS.map((column) => {
             const columnTasks = filteredTasks.filter(t => t.status === column.id);
             return (
-              <DroppableColumn 
-                key={column.id} 
-                column={column} 
-                tasks={columnTasks} 
+              <DroppableColumn
+                key={column.id}
+                column={column}
+                tasks={columnTasks}
                 onQuickAdd={() => handleQuickAdd(column.id)}
                 onOpenDetail={setDetailTask}
                 onOpenEdit={handleOpenEdit}
@@ -679,7 +679,7 @@ export default function KanbanBoard() {
       {/* Create Task Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div 
+          <div
             ref={modalRef}
             className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200"
             role="dialog"
@@ -687,8 +687,8 @@ export default function KanbanBoard() {
           >
             <div className="p-6 border-b border-slate-100 flex justify-between items-center">
               <h3 className="text-xl font-bold text-slate-800">Buat Tugas Baru</h3>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={() => setIsModalOpen(false)}
                 className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors"
               >
@@ -698,34 +698,34 @@ export default function KanbanBoard() {
             <form onSubmit={handleSaveTask} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto custom-scrollbar">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Judul Tugas</label>
-                <input 
+                <input
                   autoFocus
-                  type="text" 
-                  required 
-                  value={newTask.title} 
-                  onChange={e => setNewTask({...newTask, title: e.target.value})} 
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:border-primary-500 focus:ring-primary-500/20 outline-none transition-all text-sm" 
-                  placeholder="misalnya, Desain mockup beranda" 
+                  type="text"
+                  required
+                  value={newTask.title}
+                  onChange={e => setNewTask({ ...newTask, title: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:border-primary-500 focus:ring-primary-500/20 outline-none transition-all text-sm"
+                  placeholder="misalnya, Desain mockup beranda"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Deskripsi (Opsional)</label>
-                <textarea 
+                <textarea
                   rows={3}
-                  value={newTask.description} 
-                  onChange={e => setNewTask({...newTask, description: e.target.value})} 
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:border-primary-500 focus:ring-primary-500/20 outline-none transition-all text-sm resize-none" 
-                  placeholder="Rincian atau catatan tugas..." 
+                  value={newTask.description}
+                  onChange={e => setNewTask({ ...newTask, description: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:border-primary-500 focus:ring-primary-500/20 outline-none transition-all text-sm resize-none"
+                  placeholder="Rincian atau catatan tugas..."
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Proyek</label>
-                  <select 
-                    value={newTask.projectId} 
-                    onChange={e => setNewTask({...newTask, projectId: e.target.value})} 
+                  <select
+                    value={newTask.projectId}
+                    onChange={e => setNewTask({ ...newTask, projectId: e.target.value })}
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:border-primary-500 focus:ring-primary-500/20 outline-none bg-white transition-all text-sm"
                   >
                     <option value="">Umum (Tanpa Proyek)</option>
@@ -736,7 +736,7 @@ export default function KanbanBoard() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Prioritas</label>
-                  <select value={newTask.priority} onChange={e => setNewTask({...newTask, priority: e.target.value as Priority})} className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:border-primary-500 focus:ring-primary-500/20 outline-none bg-white transition-all text-sm">
+                  <select value={newTask.priority} onChange={e => setNewTask({ ...newTask, priority: e.target.value as Priority })} className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:border-primary-500 focus:ring-primary-500/20 outline-none bg-white transition-all text-sm">
                     <option value="Low">Low</option>
                     <option value="Medium">Medium</option>
                     <option value="High">High</option>
@@ -745,7 +745,7 @@ export default function KanbanBoard() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
-                  <select value={newTask.status} onChange={e => setNewTask({...newTask, status: e.target.value as TaskStatus})} className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:border-primary-500 focus:ring-primary-500/20 outline-none bg-white transition-all text-sm">
+                  <select value={newTask.status} onChange={e => setNewTask({ ...newTask, status: e.target.value as TaskStatus })} className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:border-primary-500 focus:ring-primary-500/20 outline-none bg-white transition-all text-sm">
                     {COLUMNS.map(col => (
                       <option key={col.id} value={col.id}>{col.title}</option>
                     ))}
@@ -755,7 +755,7 @@ export default function KanbanBoard() {
                   <label className="block text-sm font-medium text-slate-700 mb-1">Penanggung Jawab</label>
                   <select
                     value={newTask.assignee}
-                    onChange={e => setNewTask({...newTask, assignee: e.target.value})}
+                    onChange={e => setNewTask({ ...newTask, assignee: e.target.value })}
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:border-primary-500 focus:ring-primary-500/20 outline-none bg-white transition-all text-sm"
                   >
                     {currentUser && <option value={currentUser.name}>{currentUser.name} (Saya)</option>}
@@ -767,18 +767,18 @@ export default function KanbanBoard() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Tenggat Tanggal</label>
-                  <input type="date" value={newTask.dueDate} onChange={e => setNewTask({...newTask, dueDate: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:border-primary-500 focus:ring-primary-500/20 outline-none transition-all text-sm" />
+                  <input type="date" value={newTask.dueDate} onChange={e => setNewTask({ ...newTask, dueDate: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:border-primary-500 focus:ring-primary-500/20 outline-none transition-all text-sm" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-1.5"><Clock size={14} className="text-slate-400" /> Waktu / Jam (Opsional)</label>
-                  <input type="time" value={newTask.dueTime} onChange={e => setNewTask({...newTask, dueTime: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:border-primary-500 focus:ring-primary-500/20 outline-none transition-all text-sm" />
+                  <input type="time" value={newTask.dueTime} onChange={e => setNewTask({ ...newTask, dueTime: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:border-primary-500 focus:ring-primary-500/20 outline-none transition-all text-sm" />
                 </div>
               </div>
-              
+
               <div className="pt-4 flex gap-3 justify-end border-t border-slate-100">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 text-slate-600 font-medium hover:bg-slate-100 rounded-xl transition-colors outline-none focus-visible:ring-2 focus-visible:ring-slate-400 text-sm">Batal</button>
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   disabled={isSubmitting}
                   className="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-xl transition-colors shadow-sm shadow-primary-500/30 outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 text-sm flex items-center gap-2"
                 >
@@ -793,7 +793,7 @@ export default function KanbanBoard() {
       {/* Edit Task Modal */}
       {editingTask && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div 
+          <div
             ref={modalRef}
             className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200"
             role="dialog"
@@ -806,8 +806,8 @@ export default function KanbanBoard() {
                 </div>
                 <h3 className="text-xl font-bold text-slate-800">Edit Tugas & Jadwal</h3>
               </div>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={() => setEditingTask(null)}
                 className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors"
               >
@@ -817,34 +817,34 @@ export default function KanbanBoard() {
             <form onSubmit={handleSaveEdit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto custom-scrollbar">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Judul Tugas / Teks</label>
-                <input 
+                <input
                   autoFocus
-                  type="text" 
-                  required 
-                  value={editForm.title} 
-                  onChange={e => setEditForm({...editForm, title: e.target.value})} 
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:border-primary-500 focus:ring-primary-500/20 outline-none transition-all text-sm" 
-                  placeholder="Judul tugas..." 
+                  type="text"
+                  required
+                  value={editForm.title}
+                  onChange={e => setEditForm({ ...editForm, title: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:border-primary-500 focus:ring-primary-500/20 outline-none transition-all text-sm"
+                  placeholder="Judul tugas..."
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Deskripsi (Opsional)</label>
-                <textarea 
+                <textarea
                   rows={3}
-                  value={editForm.description} 
-                  onChange={e => setEditForm({...editForm, description: e.target.value})} 
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:border-primary-500 focus:ring-primary-500/20 outline-none transition-all text-sm resize-none" 
-                  placeholder="Tambahkan rincian atau catatan tugas..." 
+                  value={editForm.description}
+                  onChange={e => setEditForm({ ...editForm, description: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:border-primary-500 focus:ring-primary-500/20 outline-none transition-all text-sm resize-none"
+                  placeholder="Tambahkan rincian atau catatan tugas..."
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Proyek</label>
-                  <select 
-                    value={editForm.projectId} 
-                    onChange={e => setEditForm({...editForm, projectId: e.target.value})} 
+                  <select
+                    value={editForm.projectId}
+                    onChange={e => setEditForm({ ...editForm, projectId: e.target.value })}
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:border-primary-500 focus:ring-primary-500/20 outline-none bg-white transition-all text-sm"
                   >
                     <option value="">Umum (Tanpa Proyek)</option>
@@ -855,9 +855,9 @@ export default function KanbanBoard() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Prioritas</label>
-                  <select 
-                    value={editForm.priority} 
-                    onChange={e => setEditForm({...editForm, priority: e.target.value as Priority})} 
+                  <select
+                    value={editForm.priority}
+                    onChange={e => setEditForm({ ...editForm, priority: e.target.value as Priority })}
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:border-primary-500 focus:ring-primary-500/20 outline-none bg-white transition-all text-sm"
                   >
                     <option value="Low">Low</option>
@@ -868,9 +868,9 @@ export default function KanbanBoard() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
-                  <select 
-                    value={editForm.status} 
-                    onChange={e => setEditForm({...editForm, status: e.target.value as TaskStatus})} 
+                  <select
+                    value={editForm.status}
+                    onChange={e => setEditForm({ ...editForm, status: e.target.value as TaskStatus })}
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:border-primary-500 focus:ring-primary-500/20 outline-none bg-white transition-all text-sm"
                   >
                     {COLUMNS.map(col => (
@@ -882,7 +882,7 @@ export default function KanbanBoard() {
                   <label className="block text-sm font-medium text-slate-700 mb-1">Penanggung Jawab</label>
                   <select
                     value={editForm.assignee}
-                    onChange={e => setEditForm({...editForm, assignee: e.target.value})}
+                    onChange={e => setEditForm({ ...editForm, assignee: e.target.value })}
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:border-primary-500 focus:ring-primary-500/20 outline-none bg-white transition-all text-sm"
                   >
                     {currentUser && <option value={currentUser.name}>{currentUser.name} (Saya)</option>}
@@ -894,24 +894,24 @@ export default function KanbanBoard() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Tenggat Tanggal (Jadwal)</label>
-                  <input 
-                    type="date" 
-                    value={editForm.dueDate} 
-                    onChange={e => setEditForm({...editForm, dueDate: e.target.value})} 
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:border-primary-500 focus:ring-primary-500/20 outline-none transition-all text-sm" 
+                  <input
+                    type="date"
+                    value={editForm.dueDate}
+                    onChange={e => setEditForm({ ...editForm, dueDate: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:border-primary-500 focus:ring-primary-500/20 outline-none transition-all text-sm"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-1.5"><Clock size={14} className="text-slate-400" /> Waktu / Jam (Opsional)</label>
-                  <input 
-                    type="time" 
-                    value={editForm.dueTime} 
-                    onChange={e => setEditForm({...editForm, dueTime: e.target.value})} 
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:border-primary-500 focus:ring-primary-500/20 outline-none transition-all text-sm" 
+                  <input
+                    type="time"
+                    value={editForm.dueTime}
+                    onChange={e => setEditForm({ ...editForm, dueTime: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:border-primary-500 focus:ring-primary-500/20 outline-none transition-all text-sm"
                   />
                 </div>
               </div>
-              
+
               <div className="pt-4 flex gap-3 justify-end border-t border-slate-100">
                 <button type="button" onClick={() => setEditingTask(null)} className="px-5 py-2.5 text-slate-600 font-medium hover:bg-slate-100 rounded-xl transition-colors outline-none focus-visible:ring-2 focus-visible:ring-slate-400 text-sm">Batal</button>
                 <button type="submit" className="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-xl transition-colors shadow-sm shadow-primary-500/30 outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 text-sm font-semibold">Simpan Perubahan</button>
@@ -934,21 +934,21 @@ export default function KanbanBoard() {
               <div className="flex-1 mr-4">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-500 bg-slate-100 px-2 py-1 rounded-md">{detailTask.project}</span>
-                  <span className={`text-xs font-bold uppercase px-2 py-1 rounded-md ${ detailTask.priority === 'Urgent' ? 'bg-red-100 text-red-700' : detailTask.priority === 'High' ? 'bg-orange-100 text-orange-700' : detailTask.priority === 'Medium' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'}`}>{detailTask.priority}</span>
+                  <span className={`text-xs font-bold uppercase px-2 py-1 rounded-md ${detailTask.priority === 'Urgent' ? 'bg-red-100 text-red-700' : detailTask.priority === 'High' ? 'bg-orange-100 text-orange-700' : detailTask.priority === 'Medium' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'}`}>{detailTask.priority}</span>
                 </div>
                 <h3 className="text-xl font-bold text-slate-900">{detailTask.title}</h3>
               </div>
               <div className="flex items-center gap-1.5 flex-wrap">
-                <button 
-                  onClick={() => handleShareTaskWhatsApp(detailTask)} 
+                <button
+                  onClick={() => handleShareTaskWhatsApp(detailTask)}
                   className="px-2.5 py-1.5 hover:bg-emerald-50 rounded-xl text-emerald-700 border border-emerald-200 transition-colors flex items-center gap-1 text-xs font-semibold cursor-pointer shadow-2xs"
                   title="Bagikan rincian tugas ke WhatsApp"
                 >
                   <Share2 size={13} className="text-emerald-600" />
                   <span>Share WA</span>
                 </button>
-                <button 
-                  onClick={() => handleOpenEdit(detailTask)} 
+                <button
+                  onClick={() => handleOpenEdit(detailTask)}
                   className="px-2.5 py-1.5 hover:bg-primary-50 rounded-xl text-primary-600 border border-primary-200 transition-colors flex items-center gap-1 text-xs font-semibold cursor-pointer"
                   title="Edit Tugas & Jadwal"
                 >
@@ -973,12 +973,11 @@ export default function KanbanBoard() {
                     return (
                       <button
                         key={col.id}
-                        onClick={() => { updateTaskStatus(detailTask.id, col.id); setDetailTask({...detailTask, status: col.id}); }}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border flex items-center gap-1.5 cursor-pointer ${
-                          isActive
-                            ? 'bg-primary-600 text-white border-primary-600 shadow-xs'
-                            : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
-                        }`}
+                        onClick={() => { updateTaskStatus(detailTask.id, col.id); setDetailTask({ ...detailTask, status: col.id }); }}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border flex items-center gap-1.5 cursor-pointer ${isActive
+                          ? 'bg-primary-600 text-white border-primary-600 shadow-xs'
+                          : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                          }`}
                       >
                         <SIcon size={13} className={isActive ? 'text-white' : col.iconColor} />
                         <span>{col.title}</span>
@@ -1252,16 +1251,15 @@ export default function KanbanBoard() {
                 Edit
               </button>
               <button
-                onClick={() => { 
+                onClick={() => {
                   const nextStatus: TaskStatus = detailTask.status === 'completed' ? 'in_progress' : 'completed';
-                  updateTaskStatus(detailTask.id, nextStatus); 
-                  setDetailTask({...detailTask, status: nextStatus}); 
+                  updateTaskStatus(detailTask.id, nextStatus);
+                  setDetailTask({ ...detailTask, status: nextStatus });
                 }}
-                className={`flex-1 py-2.5 rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition-all ${
-                  detailTask.status === 'completed'
-                    ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm'
-                }`}
+                className={`flex-1 py-2.5 rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition-all ${detailTask.status === 'completed'
+                  ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm'
+                  }`}
               >
                 <CheckCircle2 size={16} />
                 {detailTask.status === 'completed' ? 'Buka Kembali' : 'Tandai Selesai'}
@@ -1276,9 +1274,9 @@ export default function KanbanBoard() {
 }
 
 // --- DND Kit Column Component ---
-function DroppableColumn({ column, tasks, onQuickAdd, onOpenDetail, onOpenEdit }: { 
-  column: typeof COLUMNS[number], 
-  tasks: Task[], 
+function DroppableColumn({ column, tasks, onQuickAdd, onOpenDetail, onOpenEdit }: {
+  column: typeof COLUMNS[number],
+  tasks: Task[],
   onQuickAdd: () => void,
   onOpenDetail: (t: Task) => void,
   onOpenEdit: (t: Task) => void
@@ -1291,7 +1289,7 @@ function DroppableColumn({ column, tasks, onQuickAdd, onOpenDetail, onOpenEdit }
   const ColumnIcon = column.icon;
 
   return (
-    <div 
+    <div
       ref={setNodeRef}
       className={cn(
         "flex-shrink-0 w-[85vw] md:w-80 snap-center bg-slate-100/60 rounded-2xl flex flex-col max-h-full border transition-all duration-150",
@@ -1309,7 +1307,7 @@ function DroppableColumn({ column, tasks, onQuickAdd, onOpenDetail, onOpenEdit }
             {tasks.length}
           </span>
         </h3>
-        <button 
+        <button
           onClick={onQuickAdd}
           className="text-slate-400 hover:text-primary-600 p-1.5 rounded-lg hover:bg-white/80 transition-all cursor-pointer"
           title={`Tambah tugas ke ${column.title}`}
@@ -1323,7 +1321,7 @@ function DroppableColumn({ column, tasks, onQuickAdd, onOpenDetail, onOpenEdit }
         {tasks.map((task) => (
           <DraggableTask key={task.id} task={task} onOpenDetail={onOpenDetail} onOpenEdit={onOpenEdit} />
         ))}
-        
+
         {tasks.length === 0 && !isOver && (
           <div className="h-28 border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center text-slate-400 text-xs gap-1.5 bg-white/40">
             <ColumnIcon size={20} className={cn("opacity-40", column.iconColor)} />
@@ -1331,10 +1329,10 @@ function DroppableColumn({ column, tasks, onQuickAdd, onOpenDetail, onOpenEdit }
           </div>
         )}
       </div>
-      
+
       {/* Quick Add Button */}
       <div className="p-2.5 border-t border-slate-200/60 bg-white/40 rounded-b-2xl mt-auto">
-        <button 
+        <button
           onClick={onQuickAdd}
           className="w-full py-2 rounded-xl border border-dashed border-slate-300 text-slate-600 text-xs font-semibold hover:border-primary-500 hover:text-primary-600 hover:bg-white transition-all flex items-center justify-center gap-1.5 shadow-2xs hover:shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-primary-500 cursor-pointer"
         >
@@ -1367,10 +1365,10 @@ function DraggableTask({ task, onOpenDetail, onOpenEdit }: { task: Task; onOpenD
 
   return (
     <div ref={setNodeRef} style={style} className="relative outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded-xl touch-manipulation group">
-      <TaskCard 
-        task={task} 
-        onOpenDetail={onOpenDetail} 
-        onOpenEdit={onOpenEdit} 
+      <TaskCard
+        task={task}
+        onOpenDetail={onOpenDetail}
+        onOpenEdit={onOpenEdit}
         dragHandleProps={{ attributes, listeners }}
       />
     </div>
@@ -1378,14 +1376,14 @@ function DraggableTask({ task, onOpenDetail, onOpenEdit }: { task: Task; onOpenD
 }
 
 // --- Presentation Component for Task ---
-function TaskCard({ 
+function TaskCard({
   task,
   isDragging = false,
   isOverlay = false,
   onOpenDetail,
   onOpenEdit,
   dragHandleProps,
-}: { 
+}: {
   task: Task;
   isDragging?: boolean;
   isOverlay?: boolean;
@@ -1439,7 +1437,7 @@ function TaskCard({
 
   return (
     <>
-      <div 
+      <div
         className={cn(
           "bg-white p-3.5 rounded-xl border transition-all group relative select-none",
           isOverlay ? "shadow-xl border-primary-400 scale-105 rotate-1 cursor-grabbing ring-2 ring-primary-400/20" : "border-slate-200 shadow-2xs hover:shadow-md hover:border-slate-300",
@@ -1471,8 +1469,8 @@ function TaskCard({
               title={isCompleted ? "Tandai belum selesai" : "Tandai selesai"}
               className={cn(
                 "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all cursor-pointer hover:scale-110",
-                isCompleted 
-                  ? "bg-emerald-500 border-emerald-500 text-white shadow-2xs" 
+                isCompleted
+                  ? "bg-emerald-500 border-emerald-500 text-white shadow-2xs"
                   : "border-slate-300 hover:border-emerald-500 bg-white"
               )}
             >
@@ -1529,9 +1527,9 @@ function TaskCard({
                   {COLUMNS.filter(col => col.id !== task.status).map(col => {
                     const ColIcon = col.icon;
                     return (
-                      <button 
-                        key={col.id} 
-                        onClick={(e) => handleMenuAction(e, col.id)} 
+                      <button
+                        key={col.id}
+                        onClick={(e) => handleMenuAction(e, col.id)}
                         className="w-full text-left px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2"
                       >
                         <span className={cn("p-1 rounded-md", col.iconBg)}>
@@ -1551,20 +1549,20 @@ function TaskCard({
             </div>
           </div>
         </div>
-        
+
         <h4 className={cn(
           "font-semibold text-slate-800 mb-3 text-sm leading-snug transition-colors cursor-pointer",
           isCompleted ? "line-through text-slate-400" : "group-hover:text-primary-600"
         )}>
           {task.title}
         </h4>
-        
+
         {/* Footer */}
         <div className="flex items-center justify-between mt-auto pt-2.5 border-t border-slate-100">
           <div className="flex items-center gap-3 text-xs font-medium text-slate-400">
             {task.dueDate && task.dueDate !== 'No date' && (
               <div className={cn(
-                "flex items-center gap-1", 
+                "flex items-center gap-1",
                 isOverdue ? "text-rose-500 font-semibold" : "text-slate-500"
               )}>
                 <Calendar size={12} className={isOverdue ? "text-rose-500" : "text-slate-400"} />
@@ -1572,9 +1570,9 @@ function TaskCard({
               </div>
             )}
             {task.checklist && task.checklist.length > 0 && (
-              <div 
+              <div
                 className={cn(
-                  "flex items-center gap-1", 
+                  "flex items-center gap-1",
                   task.checklist.every(c => c.done) ? "text-emerald-600 font-semibold" : "text-slate-400"
                 )}
                 title={`${task.checklist.filter(c => c.done).length} dari ${task.checklist.length} subtugas selesai`}
@@ -1600,8 +1598,8 @@ function TaskCard({
               </div>
             )}
           </div>
-          
-          <div 
+
+          <div
             className="h-6 w-6 min-w-6 flex-shrink-0 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full text-white flex items-center justify-center font-bold text-[10px] shadow-xs ring-2 ring-white uppercase tracking-tighter"
             title={`Ditugaskan: ${task.assignee || 'Tidak ada'}`}
           >

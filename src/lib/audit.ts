@@ -2,7 +2,7 @@ import { db } from './firebase';
 import { collection, doc, setDoc } from 'firebase/firestore';
 
 export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE';
-export type EntityType = 'Task' | 'Project' | 'Document' | 'Meeting' | 'Team' | 'Event';
+export type EntityType = 'Task' | 'Project' | 'Document' | 'Meeting' | 'Team' | 'Event' | 'Finance';
 
 export async function logAuditAction(
   orgId: string,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -9,16 +9,7 @@ import { useAppStore } from '../store/useAppStore';
 import { auth } from '../lib/firebase';
 import { signOut } from 'firebase/auth';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import KanbanBoard from '../components/KanbanBoard';
-import MeetingRoom from '../components/MeetingRoom';
-import TeamManagement from '../components/TeamManagement';
-import SettingsComponent from '../components/Settings';
-import ProjectsView from '../components/ProjectsView';
-import CalendarView from '../components/CalendarView';
-import DocumentsView from '../components/DocumentsView';
 import CommandPalette from '../components/CommandPalette';
-import DecisionLog from '../components/DecisionLog';
-import AgendaView from '../components/AgendaView';
 import { parseAnyDate, parseDueDateParts } from '../lib/dateUtils';
 import {
   LayoutDashboard,
@@ -44,9 +35,38 @@ import {
   Gavel,
   ListTodo,
   WifiOff,
+  Wallet,
+  MoreHorizontal,
 } from 'lucide-react';
 
-const VALID_TABS = ['dashboard', 'tasks', 'meetings', 'team', 'projects', 'decisions', 'calendar', 'agenda', 'documents', 'settings'] as const;
+// Code-splitting via React.lazy to keep initial bundle size minimal
+const KanbanBoard = lazy(() => import('../components/KanbanBoard'));
+const MeetingRoom = lazy(() => import('../components/MeetingRoom'));
+const TeamManagement = lazy(() => import('../components/TeamManagement'));
+const SettingsComponent = lazy(() => import('../components/Settings'));
+const ProjectsView = lazy(() => import('../components/ProjectsView'));
+const CalendarView = lazy(() => import('../components/CalendarView'));
+const DocumentsView = lazy(() => import('../components/DocumentsView'));
+const DecisionLog = lazy(() => import('../components/DecisionLog'));
+const AgendaView = lazy(() => import('../components/AgendaView'));
+const FinanceView = lazy(() => import('../components/FinanceView'));
+
+function TabLoadingSkeleton() {
+  return (
+    <div className="flex-1 p-6 md:p-8 space-y-4 animate-pulse bg-slate-50/50">
+      <div className="h-8 w-48 bg-slate-200 rounded-xl" />
+      <div className="h-4 w-72 bg-slate-200 rounded-lg" />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
+        <div className="h-28 bg-slate-200 rounded-2xl" />
+        <div className="h-28 bg-slate-200 rounded-2xl" />
+        <div className="h-28 bg-slate-200 rounded-2xl" />
+      </div>
+      <div className="h-64 bg-slate-200 rounded-2xl mt-4" />
+    </div>
+  );
+}
+
+const VALID_TABS = ['dashboard', 'projects', 'tasks', 'meetings', 'decisions', 'finances', 'calendar', 'agenda', 'documents', 'team', 'settings'] as const;
 type TabType = typeof VALID_TABS[number];
 
 export default function DashboardLayout() {
@@ -84,6 +104,7 @@ export default function DashboardLayout() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [isCmdOpen, setIsCmdOpen] = useState(false);
+  const [isMobileMoreOpen, setIsMobileMoreOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
   const { tasks, meetings, projects, currentUser, setCurrentUser, team, orgName, events } = useAppStore();
@@ -308,6 +329,7 @@ export default function DashboardLayout() {
           <NavItem collapsed={isSidebarCollapsed} icon={<CheckSquare size={20} />} label="Tugas" active={activeTab === 'tasks'} onClick={() => { setActiveTab('tasks'); setIsSidebarOpen(false); }} />
           <NavItem collapsed={isSidebarCollapsed} icon={<CalendarDays size={20} />} label="Rapat" active={activeTab === 'meetings'} onClick={() => { setActiveTab('meetings'); setIsSidebarOpen(false); }} badge={upcomingMeetingsCount > 0 ? upcomingMeetingsCount : undefined} />
           <NavItem collapsed={isSidebarCollapsed} icon={<Gavel size={20} />} label="Keputusan" active={activeTab === 'decisions'} onClick={() => { setActiveTab('decisions'); setIsSidebarOpen(false); }} />
+          <NavItem collapsed={isSidebarCollapsed} icon={<Wallet size={20} />} label="Keuangan" active={activeTab === 'finances'} onClick={() => { setActiveTab('finances'); setIsSidebarOpen(false); }} />
           <NavItem collapsed={isSidebarCollapsed} icon={<Calendar size={20} />} label="Kalender" active={activeTab === 'calendar'} onClick={() => { setActiveTab('calendar'); setIsSidebarOpen(false); }} badge={events.length > 0 ? events.length : undefined} />
           <NavItem collapsed={isSidebarCollapsed} icon={<ListTodo size={20} />} label="Agenda" active={activeTab === 'agenda'} onClick={() => { setActiveTab('agenda'); setIsSidebarOpen(false); }} />
           <NavItem collapsed={isSidebarCollapsed} icon={<FileText size={20} />} label="Dokumen" active={activeTab === 'documents'} onClick={() => { setActiveTab('documents'); setIsSidebarOpen(false); }} />
@@ -705,26 +727,29 @@ export default function DashboardLayout() {
           </div>
         )}
 
-        {activeTab === 'tasks' && <div className="flex-1 flex flex-col min-h-0 pb-16 md:pb-0"><KanbanBoard /></div>}
-        {activeTab === 'meetings' && <div className="flex-1 flex flex-col min-h-0 pb-16 md:pb-0"><MeetingRoom /></div>}
-        {activeTab === 'team' && <div className="flex-1 flex flex-col min-h-0 pb-16 md:pb-0"><TeamManagement /></div>}
-        {activeTab === 'projects' && <div className="flex-1 flex flex-col min-h-0 pb-16 md:pb-0"><ProjectsView onNavigate={setActiveTab} /></div>}
-        {activeTab === 'decisions' && <div className="flex-1 flex flex-col min-h-0 pb-16 md:pb-0"><DecisionLog onNavigate={setActiveTab} /></div>}
-        {activeTab === 'calendar' && <div className="flex-1 flex flex-col min-h-0 pb-16 md:pb-0"><CalendarView onNavigate={setActiveTab} /></div>}
-        {activeTab === 'agenda' && <div className="flex-1 flex flex-col min-h-0 pb-16 md:pb-0"><AgendaView onNavigate={setActiveTab} /></div>}
-        {activeTab === 'documents' && <div className="flex-1 flex flex-col min-h-0 pb-16 md:pb-0"><DocumentsView /></div>}
-        {activeTab === 'settings' && <div className="flex-1 flex flex-col min-h-0 pb-16 md:pb-0"><SettingsComponent /></div>}
+        <Suspense fallback={<TabLoadingSkeleton />}>
+          {activeTab === 'tasks' && <div className="flex-1 flex flex-col min-h-0 pb-16 md:pb-0"><KanbanBoard /></div>}
+          {activeTab === 'meetings' && <div className="flex-1 flex flex-col min-h-0 pb-16 md:pb-0"><MeetingRoom /></div>}
+          {activeTab === 'team' && <div className="flex-1 flex flex-col min-h-0 pb-16 md:pb-0"><TeamManagement /></div>}
+          {activeTab === 'projects' && <div className="flex-1 flex flex-col min-h-0 pb-16 md:pb-0"><ProjectsView onNavigate={setActiveTab} /></div>}
+          {activeTab === 'decisions' && <div className="flex-1 flex flex-col min-h-0 pb-16 md:pb-0"><DecisionLog onNavigate={setActiveTab} /></div>}
+          {activeTab === 'finances' && <div className="flex-1 flex flex-col min-h-0 pb-16 md:pb-0"><FinanceView /></div>}
+          {activeTab === 'calendar' && <div className="flex-1 flex flex-col min-h-0 pb-16 md:pb-0"><CalendarView onNavigate={setActiveTab} /></div>}
+          {activeTab === 'agenda' && <div className="flex-1 flex flex-col min-h-0 pb-16 md:pb-0"><AgendaView onNavigate={setActiveTab} /></div>}
+          {activeTab === 'documents' && <div className="flex-1 flex flex-col min-h-0 pb-16 md:pb-0"><DocumentsView /></div>}
+          {activeTab === 'settings' && <div className="flex-1 flex flex-col min-h-0 pb-16 md:pb-0"><SettingsComponent /></div>}
+        </Suspense>
 
         {/* ─── Mobile Bottom Navigation Bar (md:hidden) ─── */}
         <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] px-2 py-1.5 flex items-center justify-around safe-area-bottom">
           <button
             onClick={() => setActiveTab('dashboard')}
             className={cn(
-              'flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all relative',
+              'flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all relative',
               activeTab === 'dashboard' ? 'text-primary-600 font-bold' : 'text-slate-400 hover:text-slate-600 font-medium'
             )}
           >
-            <LayoutDashboard size={20} className={activeTab === 'dashboard' ? 'stroke-[2.5]' : 'stroke-2'} />
+            <LayoutDashboard size={19} className={activeTab === 'dashboard' ? 'stroke-[2.5]' : 'stroke-2'} />
             <span className="text-[10px] mt-0.5">Beranda</span>
             {activeTab === 'dashboard' && <span className="absolute -bottom-1 w-1 h-1 rounded-full bg-primary-600" />}
           </button>
@@ -732,12 +757,12 @@ export default function DashboardLayout() {
           <button
             onClick={() => setActiveTab('tasks')}
             className={cn(
-              'flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all relative',
+              'flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all relative',
               activeTab === 'tasks' ? 'text-primary-600 font-bold' : 'text-slate-400 hover:text-slate-600 font-medium'
             )}
           >
             <div className="relative">
-              <CheckSquare size={20} className={activeTab === 'tasks' ? 'stroke-[2.5]' : 'stroke-2'} />
+              <CheckSquare size={19} className={activeTab === 'tasks' ? 'stroke-[2.5]' : 'stroke-2'} />
               {activeTasksCount > 0 && (
                 <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500" />
               )}
@@ -749,12 +774,12 @@ export default function DashboardLayout() {
           <button
             onClick={() => setActiveTab('meetings')}
             className={cn(
-              'flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all relative',
+              'flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all relative',
               activeTab === 'meetings' ? 'text-primary-600 font-bold' : 'text-slate-400 hover:text-slate-600 font-medium'
             )}
           >
             <div className="relative">
-              <CalendarDays size={20} className={activeTab === 'meetings' ? 'stroke-[2.5]' : 'stroke-2'} />
+              <CalendarDays size={19} className={activeTab === 'meetings' ? 'stroke-[2.5]' : 'stroke-2'} />
               {upcomingMeetingsCount > 0 && (
                 <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
               )}
@@ -766,12 +791,12 @@ export default function DashboardLayout() {
           <button
             onClick={() => setActiveTab('agenda')}
             className={cn(
-              'flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all relative',
+              'flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all relative',
               activeTab === 'agenda' ? 'text-primary-600 font-bold' : 'text-slate-400 hover:text-slate-600 font-medium'
             )}
           >
             <div className="relative">
-              <ListTodo size={20} className={activeTab === 'agenda' ? 'stroke-[2.5]' : 'stroke-2'} />
+              <ListTodo size={19} className={activeTab === 'agenda' ? 'stroke-[2.5]' : 'stroke-2'} />
               {unfinishedAgendas.length > 0 && (
                 <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-500" />
               )}
@@ -783,15 +808,98 @@ export default function DashboardLayout() {
           <button
             onClick={() => setActiveTab('projects')}
             className={cn(
-              'flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all relative',
+              'flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all relative',
               activeTab === 'projects' ? 'text-primary-600 font-bold' : 'text-slate-400 hover:text-slate-600 font-medium'
             )}
           >
-            <FolderKanban size={20} className={activeTab === 'projects' ? 'stroke-[2.5]' : 'stroke-2'} />
+            <FolderKanban size={19} className={activeTab === 'projects' ? 'stroke-[2.5]' : 'stroke-2'} />
             <span className="text-[10px] mt-0.5">Proyek</span>
             {activeTab === 'projects' && <span className="absolute -bottom-1 w-1 h-1 rounded-full bg-primary-600" />}
           </button>
+
+          <button
+            onClick={() => setIsMobileMoreOpen(true)}
+            className={cn(
+              'flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all relative',
+              ['finances', 'calendar', 'decisions', 'documents', 'team', 'settings'].includes(activeTab) ? 'text-primary-600 font-bold' : 'text-slate-400 hover:text-slate-600 font-medium'
+            )}
+          >
+            <MoreHorizontal size={19} className={['finances', 'calendar', 'decisions', 'documents', 'team', 'settings'].includes(activeTab) ? 'stroke-[2.5]' : 'stroke-2'} />
+            <span className="text-[10px] mt-0.5">Lainnya</span>
+            {['finances', 'calendar', 'decisions', 'documents', 'team', 'settings'].includes(activeTab) && <span className="absolute -bottom-1 w-1 h-1 rounded-full bg-primary-600" />}
+          </button>
         </nav>
+
+        {/* ─── Mobile "Lainnya" Action Sheet Modal (md:hidden) ─── */}
+        {isMobileMoreOpen && (
+          <div 
+            className="md:hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex flex-col justify-end animate-in fade-in duration-150"
+            onClick={() => setIsMobileMoreOpen(false)}
+          >
+            <div 
+              className="bg-white rounded-t-3xl p-5 shadow-2xl border-t border-slate-200 space-y-4 animate-in slide-in-from-bottom duration-200 safe-area-bottom"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto" />
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-slate-800 text-sm">Menu Panitia Lainnya</h3>
+                <button onClick={() => setIsMobileMoreOpen(false)} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100">
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2.5">
+                <button
+                  onClick={() => { setActiveTab('finances'); setIsMobileMoreOpen(false); }}
+                  className={cn("p-3 rounded-2xl flex flex-col items-center gap-1.5 border transition-all cursor-pointer", activeTab === 'finances' ? "bg-emerald-50 border-emerald-300 text-emerald-700 font-bold" : "bg-slate-50 border-slate-100 text-slate-700 hover:bg-slate-100")}
+                >
+                  <Wallet size={20} className={activeTab === 'finances' ? "text-emerald-600" : "text-slate-500"} />
+                  <span className="text-xs">Keuangan</span>
+                </button>
+
+                <button
+                  onClick={() => { setActiveTab('decisions'); setIsMobileMoreOpen(false); }}
+                  className={cn("p-3 rounded-2xl flex flex-col items-center gap-1.5 border transition-all cursor-pointer", activeTab === 'decisions' ? "bg-indigo-50 border-indigo-300 text-indigo-700 font-bold" : "bg-slate-50 border-slate-100 text-slate-700 hover:bg-slate-100")}
+                >
+                  <Gavel size={20} className={activeTab === 'decisions' ? "text-indigo-600" : "text-slate-500"} />
+                  <span className="text-xs">Keputusan</span>
+                </button>
+
+                <button
+                  onClick={() => { setActiveTab('calendar'); setIsMobileMoreOpen(false); }}
+                  className={cn("p-3 rounded-2xl flex flex-col items-center gap-1.5 border transition-all cursor-pointer", activeTab === 'calendar' ? "bg-primary-50 border-primary-300 text-primary-700 font-bold" : "bg-slate-50 border-slate-100 text-slate-700 hover:bg-slate-100")}
+                >
+                  <Calendar size={20} className={activeTab === 'calendar' ? "text-primary-600" : "text-slate-500"} />
+                  <span className="text-xs">Kalender</span>
+                </button>
+
+                <button
+                  onClick={() => { setActiveTab('documents'); setIsMobileMoreOpen(false); }}
+                  className={cn("p-3 rounded-2xl flex flex-col items-center gap-1.5 border transition-all cursor-pointer", activeTab === 'documents' ? "bg-amber-50 border-amber-300 text-amber-700 font-bold" : "bg-slate-50 border-slate-100 text-slate-700 hover:bg-slate-100")}
+                >
+                  <FileText size={20} className={activeTab === 'documents' ? "text-amber-600" : "text-slate-500"} />
+                  <span className="text-xs">Dokumen</span>
+                </button>
+
+                <button
+                  onClick={() => { setActiveTab('team'); setIsMobileMoreOpen(false); }}
+                  className={cn("p-3 rounded-2xl flex flex-col items-center gap-1.5 border transition-all cursor-pointer", activeTab === 'team' ? "bg-purple-50 border-purple-300 text-purple-700 font-bold" : "bg-slate-50 border-slate-100 text-slate-700 hover:bg-slate-100")}
+                >
+                  <Users size={20} className={activeTab === 'team' ? "text-purple-600" : "text-slate-500"} />
+                  <span className="text-xs">Tim Panitia</span>
+                </button>
+
+                <button
+                  onClick={() => { setActiveTab('settings'); setIsMobileMoreOpen(false); }}
+                  className={cn("p-3 rounded-2xl flex flex-col items-center gap-1.5 border transition-all cursor-pointer", activeTab === 'settings' ? "bg-slate-200 border-slate-300 text-slate-800 font-bold" : "bg-slate-50 border-slate-100 text-slate-700 hover:bg-slate-100")}
+                >
+                  <Settings size={20} className={activeTab === 'settings' ? "text-slate-800" : "text-slate-500"} />
+                  <span className="text-xs">Pengaturan</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

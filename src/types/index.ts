@@ -136,3 +136,30 @@ export interface Meeting {
   createdAt?: string;
   approvalStatus?: ApprovalStatus;
 }
+
+export type TransactionType = 'income' | 'expense';
+
+export type FinanceCategory = 
+  | 'Sponsorship'
+  | 'Donasi'
+  | 'Kas Organisasi'
+  | 'Konsumsi'
+  | 'Perlengkapan'
+  | 'Acara & Panggung'
+  | 'Humas & Publikasi'
+  | 'Kesekretariatan'
+  | 'Lain-lain';
+
+export interface FinanceTransaction {
+  id: string;
+  title: string;
+  type: TransactionType;
+  amount: number;
+  category: FinanceCategory | string;
+  date: string;
+  recordedBy: string;
+  notes?: string;
+  receiptUrl?: string;
+  organizationId?: string;
+  createdAt?: string;
+}

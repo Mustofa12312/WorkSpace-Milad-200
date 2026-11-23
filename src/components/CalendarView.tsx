@@ -1,8 +1,9 @@
 import { useState, useMemo, useCallback } from 'react';
 import { 
   ChevronLeft, ChevronRight, Plus, Clock, LayoutGrid, List, MapPin, User, Tag, 
-  Pencil, Calendar as CalendarIcon, Trash2, X, CalendarDays, CheckSquare, ArrowRight, FolderKanban, ExternalLink
+  Pencil, Calendar as CalendarIcon, Trash2, X, CalendarDays, CheckSquare, ArrowRight, FolderKanban, ExternalLink, Download
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { 
@@ -221,6 +222,45 @@ export default function CalendarView({ onNavigate }: CalendarViewProps) {
     setModalMode('closed');
     setSelectedItem(null);
     setNewEvent({ title: '', date: '', time: '10:00', type: 'Rapat', personInCharge: '', location: '' });
+  };
+
+  const handleAddToGoogleCalendar = (item: UnifiedCalendarItem) => {
+    const d = item.dateObj;
+    const startStr = d.toISOString().replace(/-|:|\.\d\d\d/g, '');
+    const endD = new Date(d.getTime() + 60 * 60 * 1000);
+    const endStr = endD.toISOString().replace(/-|:|\.\d\d\d/g, '');
+    const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(item.title)}&dates=${startStr}/${endStr}&details=${encodeURIComponent(item.person ? `PIC: ${item.person}` : 'Jadwal Workspace Milad 200')}&location=${encodeURIComponent(item.location || '')}`;
+    window.open(url, '_blank');
+  };
+
+  const handleDownloadICal = (item: UnifiedCalendarItem) => {
+    const d = item.dateObj;
+    const startStr = d.toISOString().replace(/-|:|\.\d\d\d/g, '');
+    const endD = new Date(d.getTime() + 60 * 60 * 1000);
+    const endStr = endD.toISOString().replace(/-|:|\.\d\d\d/g, '');
+    const ics = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Workspace Milad 200//ID',
+      'BEGIN:VEVENT',
+      `SUMMARY:${item.title}`,
+      `DTSTART:${startStr}`,
+      `DTEND:${endStr}`,
+      `DESCRIPTION:${item.person ? `PIC: ${item.person}` : 'Jadwal Milad 200'}`,
+      `LOCATION:${item.location || ''}`,
+      'STATUS:CONFIRMED',
+      'END:VEVENT',
+      'END:VCALENDAR'
+    ].join('\r\n');
+
+    const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${item.title.replace(/[^a-zA-Z0-9]/g, '_')}.ics`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success('File kalender (.ics) berhasil diunduh');
   };
 
   const prevPeriod = () => {
@@ -587,6 +627,28 @@ export default function CalendarView({ onNavigate }: CalendarViewProps) {
                     {(!selectedItem.person && !selectedItem.location) && (
                       <div className="text-center text-slate-400 py-6 bg-slate-50 rounded-2xl border border-slate-100 border-dashed text-xs font-medium">Tidak ada detail tambahan.</div>
                     )}
+
+                    {/* Google Calendar & iCal Export Buttons */}
+                    <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+                      <button
+                        type="button"
+                        onClick={() => handleAddToGoogleCalendar(selectedItem)}
+                        className="flex-1 py-2 px-3 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+                        title="Tambahkan ke Google Calendar"
+                      >
+                        <CalendarIcon size={13} className="text-blue-600" />
+                        <span>Google Cal</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDownloadICal(selectedItem)}
+                        className="flex-1 py-2 px-3 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+                        title="Unduh file kalender (.ics) untuk Apple Calendar / Outlook"
+                      >
+                        <Download size={13} className="text-emerald-600" />
+                        <span>Unduh .ics</span>
+                      </button>
+                    </div>
                   </div>
                   
                   <div className="p-4 sm:p-5 bg-slate-50/90 border-t border-slate-100 flex items-center justify-between gap-2.5">

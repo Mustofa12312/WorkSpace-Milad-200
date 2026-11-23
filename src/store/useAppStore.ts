@@ -19,8 +19,10 @@ import type { MeetingSlice } from '../stores/meetingSlice';
 import { createMeetingSlice } from '../stores/meetingSlice';
 import type { UiSlice } from '../stores/uiSlice';
 import { createUiSlice } from '../stores/uiSlice';
+import type { FinanceSlice } from '../stores/financeSlice';
+import { createFinanceSlice } from '../stores/financeSlice';
 
-export interface AppState extends AuthSlice, TaskSlice, ProjectSlice, DocumentSlice, TeamSlice, EventSlice, MeetingSlice, UiSlice {
+export interface AppState extends AuthSlice, TaskSlice, ProjectSlice, DocumentSlice, TeamSlice, EventSlice, MeetingSlice, UiSlice, FinanceSlice {
   setupSubscriptions: () => void;
   teardownSubscriptions: () => void;
 }
@@ -39,6 +41,7 @@ export const useAppStore = create<AppState>()((...a) => {
     ...createEventSlice(...a),
     ...createMeetingSlice(...a),
     ...createUiSlice(...a),
+    ...createFinanceSlice(...a),
     
     teardownSubscriptions: () => {
       unsubscribers.forEach(unsub => unsub());
@@ -70,6 +73,7 @@ export const useAppStore = create<AppState>()((...a) => {
       subscribeToCollection('events', 'events');
       subscribeToCollection('meetings', 'meetings');
       subscribeToCollection('invitations', 'invitations');
+      subscribeToCollection('finances', 'financeTransactions');
     }
   };
 });

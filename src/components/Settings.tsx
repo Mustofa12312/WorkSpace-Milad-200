@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { 
   Settings as SettingsIcon, 
   Building, 
@@ -14,14 +14,16 @@ import {
   UserCheck,
   User,
   Lock,
-  Phone
+  Phone,
+  History,
+  UserPlus
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import toast from 'react-hot-toast';
 import { auth, db } from '../lib/firebase';
 import { updateProfile, updatePassword } from 'firebase/auth';
-import { doc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { toAuthMessage } from '../lib/authErrors';
 
 function cn(...inputs: ClassValue[]) {
@@ -58,6 +60,82 @@ export default function Settings() {
   const [notifyMeetings, setNotifyMeetings] = useState(true);
   const [notifyDecisions, setNotifyDecisions] = useState(true);
   const [notifyTeam, setNotifyTeam] = useState(false);
+
+  // Join Workspace state
+  const [joinCode, setJoinCode] = useState('');
+  const [isJoining, setIsJoining] = useState(false);
+
+  // Audit Log state
+  interface AuditLogItem {
+    id: string;
+    userName: string;
+    action: string;
+    entityType: string;
+    details: string;
+    createdAt: string;
+  }
+  const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
+  const [isLoadingLogs, setIsLoadingLogs] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === 'activity') {
+      const q = query(
+        collection(db, 'auditLogs'),
+        where('organizationId', '==', currentOrgId)
+      );
+      getDocs(q).then(snap => {
+        const logs = snap.docs.map(d => ({ id: d.id, ...d.data() } as AuditLogItem));
+        logs.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+        setAuditLogs(logs.slice(0, 50));
+        setIsLoadingLogs(false);
+      }).catch(err => {
+        console.warn('Could not fetch audit logs:', err);
+        setIsLoadingLogs(false);
+      });
+    }
+  }, [activeTab, currentOrgId]);
+
+  const handleJoinWorkspace = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!joinCode.trim() || !currentUser) return;
+    setIsJoining(true);
+    try {
+      const code = joinCode.trim();
+      let targetOrgId = code;
+      let targetRole = 'Member';
+
+      // Check if it's an invite document
+      const inviteRef = doc(db, 'invitations', code);
+      const inviteSnap = await getDoc(inviteRef);
+      if (inviteSnap.exists()) {
+        const data = inviteSnap.data();
+        targetOrgId = data.organizationId;
+        targetRole = data.role || 'Member';
+      }
+
+      await updateDoc(doc(db, 'team', currentUser.id), {
+        organizationId: targetOrgId,
+        role: targetRole,
+        status: 'Active',
+        lastActive: new Date().toISOString()
+      });
+
+      useAppStore.getState().setCurrentOrgId(targetOrgId);
+      setCurrentUser({
+        ...currentUser,
+        organizationId: targetOrgId,
+        role: targetRole
+      });
+
+      toast.success(`Berhasil bergabung ke Workspace (${targetOrgId})!`);
+      setJoinCode('');
+    } catch (err) {
+      const e = err as Error;
+      toast.error(e.message || 'Gagal bergabung ke ruang kerja');
+    } finally {
+      setIsJoining(false);
+    }
+  };
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -283,6 +361,13 @@ export default function Settings() {
                 <SettingsIcon size={18} />
                 Lanjutan
               </button>
+              <button 
+                onClick={() => { setActiveTab('activity'); setIsLoadingLogs(true); }}
+                className={cn("w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors", activeTab === 'activity' ? "bg-white border border-slate-200 text-primary-600 shadow-sm" : "text-slate-600 hover:bg-slate-100")}
+              >
+                <History size={18} />
+                Log Aktivitas
+              </button>
             </nav>
           </div>
 
@@ -381,6 +466,47 @@ export default function Settings() {
                         className="bg-slate-800 hover:bg-slate-900 disabled:opacity-50 text-white px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow-sm transition-all cursor-pointer"
                       >
                         <Lock size={15} /> {isUpdatingPassword ? 'Mengubah...' : 'Simpan Kata Sandi'}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+
+                {/* Gabung Ruang Kerja dengan Kode Undangan */}
+                <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                  <div className="flex items-center gap-2 border-b border-slate-100 pb-4 mb-5">
+                    <UserPlus size={18} className="text-emerald-600" />
+                    <div>
+                      <h3 className="text-base font-bold text-slate-800">Gabung Ruang Kerja Panitia</h3>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        ID Ruang Kerja aktif Anda saat ini: <code className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-mono text-[11px]">{currentOrgId}</code>
+                      </p>
+                    </div>
+                  </div>
+
+                  <form onSubmit={handleJoinWorkspace} className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                        Kode Undangan / ID Workspace Panitia
+                      </label>
+                      <input 
+                        type="text" 
+                        value={joinCode}
+                        onChange={e => setJoinCode(e.target.value)}
+                        placeholder="Contoh: inv-173234567 atau ID Organisasi Milad 200"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" 
+                      />
+                      <p className="text-[11px] text-slate-400 mt-1.5">
+                        Masukkan kode undangan dari koordinator panitia untuk bergabung langsung ke database tugas dan rapat Milad 200.
+                      </p>
+                    </div>
+
+                    <div className="pt-2 flex justify-end">
+                      <button 
+                        type="submit"
+                        disabled={isJoining || !joinCode.trim()}
+                        className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow-sm transition-all cursor-pointer text-sm"
+                      >
+                        <UserPlus size={16} /> {isJoining ? 'Menghubungkan...' : 'Gabung Workspace'}
                       </button>
                     </div>
                   </form>
@@ -723,11 +849,88 @@ export default function Settings() {
                   </p>
                   <button 
                     onClick={handleClearCache}
-                    className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-sm transition-colors"
+                    className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-sm transition-colors cursor-pointer"
                   >
                     Bersihkan Cache & Reset Sesi Lokal
                   </button>
                 </div>
+              </div>
+            )}
+
+            {activeTab === 'activity' && (
+              <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                      <History className="text-primary-600" size={20} />
+                      Log Riwayat Aktivitas Panitia
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Audit trail otomatis untuk setiap perubahan tugas, rapat, proyek, dan dokumen panitia.
+                    </p>
+                  </div>
+                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 self-start sm:self-auto">
+                    {auditLogs.length} aktivitas terakhir
+                  </span>
+                </div>
+
+                {isLoadingLogs ? (
+                  <div className="py-12 text-center text-slate-400 text-sm animate-pulse">
+                    Memuat catatan aktivitas...
+                  </div>
+                ) : auditLogs.length === 0 ? (
+                  <div className="py-12 text-center text-slate-400 space-y-2">
+                    <History size={36} className="mx-auto text-slate-300" />
+                    <p className="text-sm font-semibold text-slate-600">Belum Ada Catatan Riwayat</p>
+                    <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                      Aktivitas pembuatan, pengeditan, atau penghapusan tugas dan data akan tercatat secara otomatis di sini.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-slate-100 max-h-[600px] overflow-y-auto custom-scrollbar">
+                    {auditLogs.map(log => {
+                      let actionColor = 'bg-slate-100 text-slate-700';
+                      let actionText = log.action;
+                      if (log.action === 'CREATE') {
+                        actionColor = 'bg-emerald-100 text-emerald-800 border-emerald-200';
+                        actionText = 'Dibuat';
+                      } else if (log.action === 'UPDATE') {
+                        actionColor = 'bg-blue-100 text-blue-800 border-blue-200';
+                        actionText = 'Diubah';
+                      } else if (log.action === 'DELETE') {
+                        actionColor = 'bg-rose-100 text-rose-800 border-rose-200';
+                        actionText = 'Dihapus';
+                      }
+
+                      const dateDisplay = log.createdAt 
+                        ? new Date(log.createdAt).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+                        : '-';
+
+                      return (
+                        <div key={log.id} className="py-3.5 flex items-start justify-between gap-3 hover:bg-slate-50/60 transition-colors px-2 rounded-xl">
+                          <div className="flex items-start gap-3">
+                            <div className="w-8 h-8 rounded-full bg-primary-100 text-primary-700 font-bold text-xs flex items-center justify-center shrink-0">
+                              {(log.userName || 'P').charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-sm font-bold text-slate-800">{log.userName || 'Panitia'}</span>
+                                <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-md border", actionColor)}>
+                                  {actionText}
+                                </span>
+                                <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                                  {log.entityType}
+                                </span>
+                              </div>
+                              <p className="text-xs text-slate-600 mt-1 leading-relaxed">{log.details}</p>
+                            </div>
+                          </div>
+                          <span className="text-[11px] text-slate-400 whitespace-nowrap shrink-0">{dateDisplay}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
 

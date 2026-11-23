@@ -34,7 +34,13 @@ service firebase.storage {
     // Shared documents: max 25 MB (mirrors MAX_UPLOAD_BYTES in DocumentsView.tsx).
     match /orgs/{orgId}/documents/{fileName} {
       allow read: if inOrg(orgId);
-      allow create: if inOrg(orgId) && request.resource.size < 25 * 1024 * 1024;
+      allow create: if inOrg(orgId) 
+        && request.resource.size < 25 * 1024 * 1024
+        && (
+          request.resource.contentType.matches('application/.*') ||
+          request.resource.contentType.matches('image/.*') ||
+          request.resource.contentType.matches('text/.*')
+        );
       allow delete: if inOrg(orgId) && isManager();
     }
 
