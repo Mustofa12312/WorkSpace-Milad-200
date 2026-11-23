@@ -12,6 +12,9 @@ import {
   Trash2,
   X,
   Check,
+  Share2,
+  Printer,
+  FileCheck2,
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -37,9 +40,11 @@ export default function DecisionLog({ onNavigate }: { onNavigate: (tab: string) 
   const { meetings, projects, currentUser, updateMeeting, addMeeting } = useAppStore();
   const [search, setSearch] = useState('');
   const [filterProject, setFilterProject] = useState('All');
+  const [filterStatus, setFilterStatus] = useState('All');
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [editingDecision, setEditingDecision] = useState<DecisionItem | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -92,10 +97,23 @@ export default function DecisionLog({ onNavigate }: { onNavigate: (tab: string) 
     const matchesSearch =
       (d.text || '').toLowerCase().includes(query) || (d.meetingTitle || '').toLowerCase().includes(query);
     const matchesProject = filterProject === 'All' || d.projectId === filterProject;
-    return matchesSearch && matchesProject;
+    const matchesStatus = filterStatus === 'All' || d.status === filterStatus;
+    return matchesSearch && matchesProject && matchesStatus;
   });
 
   const projectsWithDecisions = Array.from(new Set(allDecisions.map(d => d.projectId).filter(Boolean)));
+
+  const handleShareDecisionWhatsApp = (d: DecisionItem) => {
+    const text = 
+      `⚖️ *KEPUTUSAN RAPAT - MILAD 200*\n\n` +
+      `📜 *Keputusan*: ${d.text}\n` +
+      `🏛️ *Forum/Rapat*: ${d.meetingTitle}\n` +
+      `📅 *Tanggal*: ${formatDateDisplay(d.date)}\n` +
+      `✅ *Status*: ${d.status}\n\n` +
+      `_Dokumentasi resmi panitia Milad 200._`;
+
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+  };
 
   const handleOpenCreate = () => {
     setEditingDecision(null);
@@ -232,12 +250,21 @@ export default function DecisionLog({ onNavigate }: { onNavigate: (tab: string) 
             </p>
           </div>
 
-          <button
-            onClick={handleOpenCreate}
-            className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold shadow-sm hover:shadow-md transition-all self-start sm:self-auto cursor-pointer"
-          >
-            <Plus size={16} /> Tambah Keputusan
-          </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => setIsPrintModalOpen(true)}
+              className="flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3.5 py-2.5 rounded-xl text-sm font-semibold shadow-2xs hover:shadow-xs transition-all cursor-pointer"
+              title="Cetak atau buat rekapitulasi keputusan resmi"
+            >
+              <Printer size={16} className="text-slate-600" /> Cetak Rekap
+            </button>
+            <button
+              onClick={handleOpenCreate}
+              className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold shadow-sm hover:shadow-md transition-all self-start sm:self-auto cursor-pointer"
+            >
+              <Plus size={16} /> Tambah Keputusan
+            </button>
+          </div>
         </div>
 
         {/* Filters */}
@@ -252,7 +279,7 @@ export default function DecisionLog({ onNavigate }: { onNavigate: (tab: string) 
               onChange={e => setSearch(e.target.value)}
             />
           </div>
-          <div className="flex items-center gap-2 px-3">
+          <div className="flex items-center gap-2 px-3 border-b sm:border-b-0 sm:border-r border-slate-100">
             <Filter size={16} className="text-slate-400 flex-shrink-0" />
             <select
               value={filterProject}
@@ -264,6 +291,20 @@ export default function DecisionLog({ onNavigate }: { onNavigate: (tab: string) 
                 const p = projects.find(x => x.id === pid);
                 return p ? <option key={pid} value={pid}>{p.name}</option> : null;
               })}
+            </select>
+          </div>
+          <div className="flex items-center gap-2 px-3">
+            <span className="text-xs font-semibold text-slate-400">Status:</span>
+            <select
+              value={filterStatus}
+              onChange={e => setFilterStatus(e.target.value)}
+              className="bg-transparent border-none outline-none text-sm text-slate-700 font-medium cursor-pointer py-2 w-full sm:w-auto"
+            >
+              <option value="All">Semua Status</option>
+              <option value="Approved">Approved</option>
+              <option value="Review">Review</option>
+              <option value="Revision Required">Revision Required</option>
+              <option value="Draft">Draft</option>
             </select>
           </div>
         </div>
@@ -334,6 +375,13 @@ export default function DecisionLog({ onNavigate }: { onNavigate: (tab: string) 
                       </td>
                       <td className="px-5 py-4 align-top text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => handleShareDecisionWhatsApp(d)}
+                            title="Bagikan keputusan ke WhatsApp"
+                            className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
+                          >
+                            <Share2 size={15} />
+                          </button>
                           <button
                             onClick={() => handleOpenEdit(d)}
                             title="Edit keputusan"
@@ -543,6 +591,116 @@ export default function DecisionLog({ onNavigate }: { onNavigate: (tab: string) 
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* ─── Modal Cetak Rekapitulasi Keputusan Resmi ─── */}
+        {isPrintModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
+              {/* Header Toolbar (screen only) */}
+              <div className="px-6 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50 print:hidden">
+                <div className="flex items-center gap-2">
+                  <FileCheck2 className="text-primary-600" size={18} />
+                  <h3 className="text-sm font-bold text-slate-800">
+                    Pratinjau Dokumen Rekapitulasi Keputusan
+                  </h3>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-xs font-semibold transition-all shadow-xs cursor-pointer"
+                  >
+                    <Printer size={14} /> Cetak / Unduh PDF
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsPrintModalOpen(false)}
+                    className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Printable Document Sheet */}
+              <div className="p-6 md:p-10 overflow-y-auto bg-slate-100/50 print:p-0 print:bg-white">
+                <div className="bg-white p-8 md:p-12 rounded-xl shadow-xs border border-slate-200 max-w-3xl mx-auto print:border-none print:shadow-none print:p-0">
+                  {/* Kop Surat Organisasi */}
+                  <div className="text-center pb-4 border-b-2 border-slate-900">
+                    <p className="text-xs uppercase tracking-widest text-slate-500 font-bold mb-1">
+                      PANITIA PERINGATAN MILAD 200 TAHUN
+                    </p>
+                    <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-wide uppercase">
+                      REKAPITULASI RESMI KEPUTUSAN ORGANISASI
+                    </h1>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Sekretariat Bersama Milad 200 • Dokumen Kontrol Mutu & Keputusan Musyawarah
+                    </p>
+                  </div>
+                  <div className="h-[2px] bg-slate-900 mt-1 mb-6" />
+
+                  {/* Metadata Dokumen */}
+                  <div className="grid grid-cols-2 text-xs text-slate-600 mb-6 gap-2 bg-slate-50 p-3 rounded-lg border border-slate-200">
+                    <div>
+                      <p><span className="font-semibold text-slate-800">Nomor Arsip:</span> KEP/MILAD-200/XI/{new Date().getFullYear()}</p>
+                      <p><span className="font-semibold text-slate-800">Tanggal Cetak:</span> {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                    </div>
+                    <div>
+                      <p><span className="font-semibold text-slate-800">Total Keputusan:</span> {filteredDecisions.length} butir</p>
+                      <p><span className="font-semibold text-slate-800">Status Filter:</span> {filterStatus === 'All' ? 'Semua Status' : filterStatus}</p>
+                    </div>
+                  </div>
+
+                  {/* Tabel Keputusan */}
+                  <div className="border border-slate-300 rounded-lg overflow-hidden mb-8">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="bg-slate-100 border-b border-slate-300 font-bold text-slate-800">
+                          <th className="py-2.5 px-3 w-8 text-center border-r border-slate-300">No.</th>
+                          <th className="py-2.5 px-3 border-r border-slate-300">Butir Keputusan</th>
+                          <th className="py-2.5 px-3 w-36 border-r border-slate-300">Forum / Rapat</th>
+                          <th className="py-2.5 px-3 w-28 border-r border-slate-300">Tanggal</th>
+                          <th className="py-2.5 px-3 w-24 text-center">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200">
+                        {filteredDecisions.map((item, idx) => (
+                          <tr key={item.id} className="align-top">
+                            <td className="py-2.5 px-3 text-center border-r border-slate-200 font-semibold text-slate-600">{idx + 1}</td>
+                            <td className="py-2.5 px-3 border-r border-slate-200 font-medium text-slate-900 leading-relaxed">{item.text}</td>
+                            <td className="py-2.5 px-3 border-r border-slate-200 text-slate-700">{item.meetingTitle}</td>
+                            <td className="py-2.5 px-3 border-r border-slate-200 text-slate-600 whitespace-nowrap">{formatDateDisplay(item.date)}</td>
+                            <td className="py-2.5 px-3 text-center">
+                              <span className="font-bold text-[10px] px-2 py-0.5 rounded border border-slate-300 bg-slate-50 text-slate-800">
+                                {item.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Pengesahan Tanda Tangan */}
+                  <div className="grid grid-cols-2 gap-8 text-xs text-center mt-10 pt-4">
+                    <div>
+                      <p className="text-slate-500 mb-16">Sekretaris Pelaksana,</p>
+                      <p className="font-bold text-slate-900 border-t border-slate-400 pt-1 inline-block min-w-[160px]">
+                        Sekretariat Panitia
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-slate-500 mb-16">Ketua Panitia Milad 200,</p>
+                      <p className="font-bold text-slate-900 border-t border-slate-400 pt-1 inline-block min-w-[160px]">
+                        {currentUser?.name || 'Ketua Panitia'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useAppStore, type Task, type TaskStatus, type Priority } from '../store/useAppStore';
 import { 
   Plus, 
@@ -26,11 +26,16 @@ import {
   Eye,
   Send,
   ExternalLink,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Share2,
+  Download,
+  User,
+  FolderKanban
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { parseDueDateParts, formatTaskDueDate, isDueDateOverdue } from '../lib/dateUtils';
+import toast from 'react-hot-toast';
 
 // DND Kit
 import { 
@@ -160,8 +165,30 @@ export default function KanbanBoard() {
     assignee: ''
   });
   
+  const getInitialProjectFilter = () => {
+    if (typeof window !== 'undefined' && window.location) {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('project') || 'All';
+    }
+    return 'All';
+  };
+
   const [searchTerm, setSearchTerm] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('All');
+  const [projectFilter, setProjectFilter] = useState(getInitialProjectFilter);
+  const [assigneeFilter, setAssigneeFilter] = useState('All');
+
+  useEffect(() => {
+    const handleUrlChange = () => {
+      if (typeof window !== 'undefined' && window.location) {
+        const params = new URLSearchParams(window.location.search);
+        const p = params.get('project');
+        if (p) setProjectFilter(p);
+      }
+    };
+    window.addEventListener('popstate', handleUrlChange);
+    return () => window.removeEventListener('popstate', handleUrlChange);
+  }, []);
   const [newChecklistText, setNewChecklistText] = useState('');
   const [newCommentText, setNewCommentText] = useState('');
   const [newAttachmentName, setNewAttachmentName] = useState('');
@@ -435,14 +462,86 @@ export default function KanbanBoard() {
     }
   };
 
-  // Filter tasks based on search and priority
+  const uniqueProjects = useMemo(() => {
+    const list: { id: string; name: string }[] = [];
+    projects.forEach(p => {
+      if (!list.some(x => x.name === p.name)) list.push({ id: p.id, name: p.name });
+    });
+    tasks.forEach(t => {
+      if (t.project && !list.some(x => x.name === t.project)) {
+        list.push({ id: t.projectId || t.project, name: t.project });
+      }
+    });
+    return list;
+  }, [projects, tasks]);
+
+  const uniqueAssignees = useMemo(() => {
+    const set = new Set<string>();
+    team.forEach(m => { if (m.name) set.add(m.name); });
+    tasks.forEach(t => { if (t.assignee) set.add(t.assignee); });
+    return Array.from(set);
+  }, [team, tasks]);
+
+  const handleExportCSV = () => {
+    if (tasks.length === 0) {
+      toast.error('Belum ada tugas untuk diekspor');
+      return;
+    }
+    const headers = ['ID', 'Judul Tugas', 'Proyek', 'Status', 'Prioritas', 'Penanggung Jawab', 'Tenggat Waktu'];
+    const rows = filteredTasks.map(t => [
+      `"${t.id}"`,
+      `"${(t.title || '').replace(/"/g, '""')}"`,
+      `"${(t.project || '').replace(/"/g, '""')}"`,
+      `"${t.status || ''}"`,
+      `"${t.priority || ''}"`,
+      `"${(t.assignee || '').replace(/"/g, '""')}"`,
+      `"${t.dueDate || ''}"`
+    ]);
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Rekap_Tugas_Milad_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success(`Berhasil mengekspor ${filteredTasks.length} tugas ke CSV`);
+  };
+
+  const handleShareTaskWhatsApp = (task: Task) => {
+    const statusLabels: Record<string, string> = {
+      backlog: 'Backlog',
+      planned: 'Direncanakan',
+      in_progress: 'Sedang Berjalan',
+      review: 'Evaluasi',
+      completed: 'Selesai'
+    };
+
+    const text = 
+      `📋 *TUGAS PANITIA MILAD 200*\n\n` +
+      `📌 *Judul*: ${task.title}\n` +
+      `📁 *Proyek*: ${task.project || 'Umum'}\n` +
+      `⚡ *Prioritas*: ${task.priority || 'Medium'}\n` +
+      `👤 *Penanggung Jawab*: ${task.assignee || 'Tim Panitia'}\n` +
+      `📅 *Tenggat*: ${task.dueDate || 'Belum diatur'}\n` +
+      `🔄 *Status*: ${statusLabels[task.status] || task.status}\n\n` +
+      `_Pesan otomatis dari Ruang Kerja Panitia Milad 200._`;
+
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+  };
+
+  // Filter tasks based on search, priority, project, and assignee
   const filteredTasks = tasks.filter(t => {
     const query = searchTerm.toLowerCase();
     const matchesSearch = (t.title || '').toLowerCase().includes(query) || 
                           (t.project || '').toLowerCase().includes(query) ||
                           (t.assignee && t.assignee.toLowerCase().includes(query));
     const matchesPriority = priorityFilter === 'All' || t.priority === priorityFilter;
-    return matchesSearch && matchesPriority;
+    const matchesProject = projectFilter === 'All' || t.projectId === projectFilter || t.project === projectFilter;
+    const matchesAssignee = assigneeFilter === 'All' || t.assignee === assigneeFilter;
+    return matchesSearch && matchesPriority && matchesProject && matchesAssignee;
   });
 
   return (
@@ -454,16 +553,16 @@ export default function KanbanBoard() {
           <h2 className="text-2xl md:text-3xl font-bold text-slate-800 tracking-tight">Tugas Proyek</h2>
           <p className="text-slate-500 mt-1 text-sm md:text-base">Kelola alur kerja tim Anda dan lacak perkembangannya.</p>
         </div>
-        <div className="flex flex-col md:flex-row gap-3 items-start md:items-center w-full md:w-auto">
+        <div className="flex flex-col md:flex-row gap-2.5 items-stretch md:items-center w-full md:w-auto flex-wrap">
           
-          <div className="flex items-center bg-white rounded-xl px-4 py-2 w-full md:w-64 border border-slate-200 focus-within:ring-2 focus-within:ring-primary-500/20 shadow-xs transition-shadow">
-            <Search size={16} className="text-slate-400 flex-shrink-0" />
+          <div className="flex items-center bg-white rounded-xl px-3.5 py-2 w-full md:w-56 border border-slate-200 focus-within:ring-2 focus-within:ring-primary-500/20 shadow-xs transition-shadow">
+            <Search size={15} className="text-slate-400 flex-shrink-0" />
             <input 
               type="text" 
               placeholder="Cari tugas..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="bg-transparent border-none outline-none ml-2 w-full text-sm placeholder-slate-400"
+              className="bg-transparent border-none outline-none ml-2 w-full text-xs md:text-sm placeholder-slate-400 text-slate-800"
             />
             {searchTerm && (
               <button 
@@ -477,27 +576,71 @@ export default function KanbanBoard() {
             )}
           </div>
 
-          <div className="flex items-center bg-white rounded-xl px-3 py-2 border border-slate-200 shadow-xs">
-            <Filter size={15} className="text-slate-400 mr-1.5 flex-shrink-0" />
-            <select
-              value={priorityFilter}
-              onChange={(e) => setPriorityFilter(e.target.value)}
-              className="bg-transparent border-none outline-none text-sm text-slate-700 font-medium cursor-pointer"
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Priority Filter */}
+            <div className="flex items-center bg-white rounded-xl px-2.5 py-2 border border-slate-200 shadow-2xs">
+              <Filter size={13} className="text-slate-400 mr-1.5 flex-shrink-0" />
+              <select
+                value={priorityFilter}
+                onChange={(e) => setPriorityFilter(e.target.value)}
+                className="bg-transparent border-none outline-none text-xs text-slate-700 font-medium cursor-pointer"
+              >
+                <option value="All">Prioritas: Semua</option>
+                <option value="Urgent">Urgent</option>
+                <option value="High">High</option>
+                <option value="Medium">Medium</option>
+                <option value="Low">Low</option>
+              </select>
+            </div>
+
+            {/* Project Filter */}
+            <div className="flex items-center bg-white rounded-xl px-2.5 py-2 border border-slate-200 shadow-2xs">
+              <FolderKanban size={13} className="text-slate-400 mr-1.5 flex-shrink-0" />
+              <select
+                value={projectFilter}
+                onChange={(e) => setProjectFilter(e.target.value)}
+                className="bg-transparent border-none outline-none text-xs text-slate-700 font-medium cursor-pointer max-w-[120px] truncate"
+              >
+                <option value="All">Proyek: Semua</option>
+                {uniqueProjects.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Assignee Filter */}
+            <div className="flex items-center bg-white rounded-xl px-2.5 py-2 border border-slate-200 shadow-2xs">
+              <User size={13} className="text-slate-400 mr-1.5 flex-shrink-0" />
+              <select
+                value={assigneeFilter}
+                onChange={(e) => setAssigneeFilter(e.target.value)}
+                className="bg-transparent border-none outline-none text-xs text-slate-700 font-medium cursor-pointer max-w-[110px] truncate"
+              >
+                <option value="All">PIC: Semua</option>
+                {uniqueAssignees.map(a => (
+                  <option key={a} value={a}>{a}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Export CSV Button */}
+            <button
+              type="button"
+              onClick={handleExportCSV}
+              className="flex items-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-2 rounded-xl text-xs font-semibold transition-all shadow-2xs cursor-pointer"
+              title="Unduh rekap tugas dalam format CSV"
             >
-              <option value="All">Semua Prioritas</option>
-              <option value="Urgent">Urgent</option>
-              <option value="High">High</option>
-              <option value="Medium">Medium</option>
-              <option value="Low">Low</option>
-            </select>
+              <Download size={13} className="text-emerald-600" />
+              <span className="hidden sm:inline">Export CSV</span>
+            </button>
           </div>
 
-          <div className="flex gap-3 w-full md:w-auto">
+          <div className="flex gap-2 w-full md:w-auto">
             <button 
               onClick={() => handleQuickAdd('backlog')}
-              className="flex-1 md:flex-none bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-xl font-medium flex items-center justify-center gap-2 shadow-sm shadow-primary-500/30 transition-all hover:-translate-y-0.5 outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
+              className="flex-1 md:flex-none bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-xl text-xs md:text-sm font-semibold flex items-center justify-center gap-1.5 shadow-sm shadow-primary-500/30 transition-all hover:-translate-y-0.5 outline-none focus-visible:ring-2 focus-visible:ring-primary-500 active:scale-98"
             >
-              <Plus size={18} />
+              <Plus size={16} />
               Tugas Baru
             </button>
           </div>
@@ -795,17 +938,25 @@ export default function KanbanBoard() {
                 </div>
                 <h3 className="text-xl font-bold text-slate-900">{detailTask.title}</h3>
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <button 
+                  onClick={() => handleShareTaskWhatsApp(detailTask)} 
+                  className="px-2.5 py-1.5 hover:bg-emerald-50 rounded-xl text-emerald-700 border border-emerald-200 transition-colors flex items-center gap-1 text-xs font-semibold cursor-pointer shadow-2xs"
+                  title="Bagikan rincian tugas ke WhatsApp"
+                >
+                  <Share2 size={13} className="text-emerald-600" />
+                  <span>Share WA</span>
+                </button>
                 <button 
                   onClick={() => handleOpenEdit(detailTask)} 
-                  className="px-3 py-1.5 hover:bg-primary-50 rounded-xl text-primary-600 border border-primary-200 transition-colors flex items-center gap-1.5 text-xs font-semibold"
+                  className="px-2.5 py-1.5 hover:bg-primary-50 rounded-xl text-primary-600 border border-primary-200 transition-colors flex items-center gap-1 text-xs font-semibold cursor-pointer"
                   title="Edit Tugas & Jadwal"
                 >
-                  <Pencil size={14} />
+                  <Pencil size={13} />
                   <span>Edit</span>
                 </button>
-                <button onClick={() => setDetailTask(null)} className="p-2 hover:bg-slate-100 rounded-xl text-slate-400 hover:text-slate-700 transition-colors">
-                  <X size={20} />
+                <button onClick={() => setDetailTask(null)} className="p-1.5 hover:bg-slate-100 rounded-xl text-slate-400 hover:text-slate-700 transition-colors cursor-pointer">
+                  <X size={18} />
                 </button>
               </div>
             </div>

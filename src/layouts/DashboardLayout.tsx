@@ -708,7 +708,7 @@ export default function DashboardLayout() {
         {activeTab === 'tasks' && <div className="flex-1 flex flex-col min-h-0 pb-16 md:pb-0"><KanbanBoard /></div>}
         {activeTab === 'meetings' && <div className="flex-1 flex flex-col min-h-0 pb-16 md:pb-0"><MeetingRoom /></div>}
         {activeTab === 'team' && <div className="flex-1 flex flex-col min-h-0 pb-16 md:pb-0"><TeamManagement /></div>}
-        {activeTab === 'projects' && <div className="flex-1 flex flex-col min-h-0 pb-16 md:pb-0"><ProjectsView /></div>}
+        {activeTab === 'projects' && <div className="flex-1 flex flex-col min-h-0 pb-16 md:pb-0"><ProjectsView onNavigate={setActiveTab} /></div>}
         {activeTab === 'decisions' && <div className="flex-1 flex flex-col min-h-0 pb-16 md:pb-0"><DecisionLog onNavigate={setActiveTab} /></div>}
         {activeTab === 'calendar' && <div className="flex-1 flex flex-col min-h-0 pb-16 md:pb-0"><CalendarView onNavigate={setActiveTab} /></div>}
         {activeTab === 'agenda' && <div className="flex-1 flex flex-col min-h-0 pb-16 md:pb-0"><AgendaView onNavigate={setActiveTab} /></div>}

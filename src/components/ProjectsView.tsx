@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Plus, MoreHorizontal, FolderKanban, Users, Clock, X, CheckCircle2, Trash2, ChevronRight, AlertCircle, Pencil } from 'lucide-react';
+import { Search, Plus, MoreHorizontal, FolderKanban, Users, Clock, X, CheckCircle2, Trash2, ChevronRight, AlertCircle, Pencil, Share2 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { parseAnyDate } from '../lib/dateUtils';
@@ -10,7 +10,7 @@ function cn(...inputs: ClassValue[]) {
 
 import { useAppStore, type Project } from '../store/useAppStore';
 
-export default function ProjectsView() {
+export default function ProjectsView({ onNavigate }: { onNavigate?: (tab: string) => void } = {}) {
   const { projects, tasks, addProject, updateProject, deleteProject, updateTask, searchFocus, setSearchFocus } = useAppStore();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -48,6 +48,38 @@ export default function ProjectsView() {
     document.addEventListener('click', closeMenu);
     return () => document.removeEventListener('click', closeMenu);
   }, []);
+
+  const handleShareProjectWhatsApp = (project: Project) => {
+    const projectTasks = tasks.filter(t => t.projectId === project.id || t.project === project.name);
+    const completedCount = projectTasks.filter(t => t.status === 'completed').length;
+    const progress = projectTasks.length > 0 ? Math.round((completedCount / projectTasks.length) * 100) : (project.progress || 0);
+
+    const text =
+      `📁 *PROGRES PROYEK - MILAD 200*\n\n` +
+      `🏢 *Nama Proyek*: ${project.name}\n` +
+      `📊 *Status*: ${project.status}\n` +
+      `📈 *Progress*: ${progress}% (${completedCount}/${projectTasks.length} tugas selesai)\n` +
+      `📅 *Tenggat*: ${project.dueDate || 'TBD'}\n` +
+      `👥 *Anggota Tim*: ${project.members} orang\n\n` +
+      (project.description ? `📝 *Deskripsi*: ${project.description}\n\n` : '') +
+      `_Pembaruan otomatis Workspace Panitia Milad 200._`;
+
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+  };
+
+  const handleOpenProjectInTasks = (projectName: string, projectId: string) => {
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.set('tab', 'tasks');
+      url.searchParams.set('project', projectId || projectName);
+      window.history.pushState({}, '', url.toString());
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    }
+    if (onNavigate) {
+      onNavigate('tasks');
+    }
+    setDetailProject(null);
+  };
 
   const handleNewProject = (e: React.FormEvent) => {
     e.preventDefault();
@@ -448,14 +480,33 @@ export default function ProjectsView() {
               </div>
 
               {/* Actions */}
-              <div className="p-6 border-t border-slate-100 flex gap-3">
+              <div className="p-6 border-t border-slate-100 flex items-center justify-between gap-3 flex-wrap">
                 <button
                   onClick={() => { setConfirmDeleteId(detailProject.id); setDetailProject(null); }}
-                  className="px-4 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 font-medium rounded-xl text-sm transition-colors flex items-center gap-2"
+                  className="px-4 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 font-medium rounded-xl text-sm transition-colors flex items-center gap-2 cursor-pointer"
                 >
                   <Trash2 size={16} />
                   Hapus
                 </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleShareProjectWhatsApp(detailProject)}
+                    className="px-4 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-medium rounded-xl text-sm transition-colors flex items-center gap-2 cursor-pointer border border-emerald-200 shadow-2xs"
+                    title="Bagikan progres proyek ke WhatsApp"
+                  >
+                    <Share2 size={16} />
+                    <span>Bagikan WA</span>
+                  </button>
+
+                  <button
+                    onClick={() => handleOpenProjectInTasks(detailProject.name, detailProject.id)}
+                    className="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-xl text-sm transition-colors flex items-center gap-2 shadow-sm cursor-pointer"
+                  >
+                    <FolderKanban size={16} />
+                    <span>Buka di Papan Tugas</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
